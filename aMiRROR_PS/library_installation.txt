@@ -1,0 +1,22 @@
+# Required Libraries for aMiRROR Processing Sketch
+
+You need to install the following library in Processing:
+
+1. **Video Library**
+   - Open Processing
+   - Go to Sketch > Import Library > Add Library
+   - Search for "Video"
+   - Install "Video | GStreamer-based video library for Processing" by The Processing Foundation
+
+### Java Version Requirement
+
+The sketch now uses Java's built-in HTTP client which requires **Java 11 or newer**. Make sure your Processing installation is using a compatible Java version.
+
+To check your Java version in Processing:
+1. Open Processing
+2. Go to Help > About Processing
+3. It should show which Java version is being used
+
+If you need to update Java, download the latest JDK from [Oracle](https://www.oracle.com/java/technologies/downloads/) or [OpenJDK](https://adoptium.net/).
+
+After installing the Video library and ensuring you have Java 11+, restart Processing and open the aMiRROR.pde sketch. 

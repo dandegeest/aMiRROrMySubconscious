@@ -1,0 +1,592 @@
+import processing.video.*;
+import java.io.*;
+import java.util.*;
+import java.text.SimpleDateFormat;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.time.Duration;
+
+// Camera and display settings
+Capture cam;
+int displayWidth = 1280;
+int displayHeight = 720;
+boolean camInitialized = false;
+
+// Image handling
+PImage currentCamImage = null;
+PImage currentAIImage = null;
+PImage displayImage = null;
+float transitionAlpha = 0;
+boolean isTransitioning = false;
+
+// Timing variables
+int captureInterval = 5000; // 5 seconds
+int lastCaptureTime = 0;
+boolean requestInProgress = false;
+int requestStartTime = 0;
+int requestTimeout = 60000; // 1 minute timeout
+
+// File management
+String captureDir = "captures";
+String outputDir = "myconscious";
+SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+
+// Server settings
+String serverUrl = "http://localhost:5000/generate";
+
+// HTTP Client
+HttpClient httpClient;
+
+// Replicate model parameters
+String currentPrompt = "MY_SUBCONSCIOUS";
+boolean addSubconsciousTrigger = false; // Whether to add MY_SUBCONSCIOUS trigger to prompts
+String modelVersion = "schnell";
+boolean goFast = false;
+float loraScale = 1.0;
+String megapixels = "1";
+int numOutputs = 1;
+String aspectRatio = "custom";
+String outputFormat = "png";
+float guidanceScale = 3;
+int outputQuality = 80;
+float promptStrength = 0.6;
+float extraLoraScale = 1.0;
+int numInferenceSteps = 4;
+boolean showSettings = false;
+
+// List of prompts to cycle through
+String[] prompts = {
+  "shattered dream in motion",
+  "face made of fog",
+  "emotions blooming like flowers",
+  "ghost of forgotten thoughts",
+  "inner self made visible",
+  "memory dissolved in color",
+  "eyes like distant galaxies",
+  "the soul as static",
+  "subconscious masked in gold",
+  "echo of a feeling"
+};
+int currentPromptIndex = 0;
+
+void setup() {
+  // Set up the display in landscape mode
+  size(1280, 720);
+  frameRate(30);
+  
+  // Initialize directories
+  File capturePath = new File(dataPath(captureDir));
+  File outputPath = new File(dataPath(outputDir));
+  capturePath.mkdir();
+  outputPath.mkdir();
+  
+  // Initialize camera
+  initializeCamera();
+  
+  // Initialize HTTP client
+  httpClient = HttpClient.newBuilder()
+               .version(HttpClient.Version.HTTP_1_1)
+               .connectTimeout(Duration.ofSeconds(30))
+               .build();
+  
+  // Create a blank display image
+  displayImage = createImage(displayWidth, displayHeight, RGB);
+  displayImage.loadPixels();
+  for (int i = 0; i < displayImage.pixels.length; i++) {
+    displayImage.pixels[i] = color(0);
+  }
+  displayImage.updatePixels();
+}
+
+void draw() {
+  background(0);
+  
+  // If camera is available, read the frame
+  if (camInitialized && cam.available()) {
+    cam.read();
+    
+    // Process the camera image
+    PImage processedImage = processImage(cam);
+    currentCamImage = processedImage;
+    
+    // Display camera image or AI image with transition
+    updateDisplay();
+    
+    // Check if it's time for a new capture
+    if (!requestInProgress && millis() - lastCaptureTime > captureInterval) {
+      captureAndProcess();
+    }
+    
+    // Check for timeout on requests
+    if (requestInProgress && millis() - requestStartTime > requestTimeout) {
+      println("Request timed out, resetting");
+      requestInProgress = false;
+    }
+  }
+  
+  // Display the current image
+  image(displayImage, 0, 0, width, height);
+  
+  // Display status information
+  displayStatus();
+}
+
+void initializeCamera() {
+  String[] cameras = Capture.list();
+  
+  if (cameras == null || cameras.length == 0) {
+    println("No cameras available");
+    return;
+  }
+  
+  // Print available cameras
+  println("Available cameras:");
+  for (int i = 0; i < cameras.length; i++) {
+    println(i + ": " + cameras[i]);
+  }
+  
+  // First try to find the NexiGo N960E camera specifically
+  for (int i = 0; i < cameras.length; i++) {
+    if (cameras[i].contains("NexiGo N960E")) {
+      println("Selected NexiGo camera: " + cameras[i]);
+      cam = new Capture(this, cameras[i]);
+      camInitialized = true;
+      cam.start();
+      return;
+    }
+  }
+  
+  // If NexiGo not found, try to use any camera with 720p if available
+  for (int i = 0; i < cameras.length; i++) {
+    if (cameras[i].contains("720")) {
+      println("Selected 720p camera: " + cameras[i]);
+      cam = new Capture(this, cameras[i]);
+      camInitialized = true;
+      cam.start();
+      return;
+    }
+  }
+  
+  // If no 720p camera, use the first available camera
+  if (!camInitialized && cameras.length > 0) {
+    println("Selected default camera: " + cameras[0]);
+    cam = new Capture(this, cameras[0]);
+    camInitialized = true;
+    cam.start();
+  }
+}
+
+PImage processImage(Capture camImage) {
+  // Create an image with the target display dimensions
+  PImage result = createImage(displayWidth, displayHeight, RGB);
+  
+  // Calculate scaling to maintain aspect ratio and center crop
+  float aspectRatio1 = (float)displayWidth / (float)displayHeight;
+  float aspectRatio2 = (float)cam.width / (float)cam.height;
+  
+  float scaleFactor;
+  int sourceX, sourceY, sourceWidth, sourceHeight;
+  
+  if (aspectRatio1 > aspectRatio2) {
+    // Target is wider than source - scale to match width and crop height
+    scaleFactor = (float)displayWidth / (float)cam.width;
+    sourceX = 0;
+    sourceWidth = cam.width;
+    sourceHeight = (int)(displayHeight / scaleFactor);
+    sourceY = (cam.height - sourceHeight) / 2; // Center vertically
+  } else {
+    // Target is taller than source - scale to match height and crop width
+    scaleFactor = (float)displayHeight / (float)cam.height;
+    sourceY = 0;
+    sourceHeight = cam.height;
+    sourceWidth = (int)(displayWidth / scaleFactor);
+    sourceX = (cam.width - sourceWidth) / 2; // Center horizontally
+  }
+  
+  // Resize and crop the camera image to fit the display
+  result.copy(camImage, sourceX, sourceY, sourceWidth, sourceHeight, 
+               0, 0, displayWidth, displayHeight);
+  
+  return result;
+}
+
+void updateDisplay() {
+  // Handle transition between camera and AI images
+  if (currentAIImage != null) {
+    // We have an AI image, blend with camera
+    PImage blended = createImage(displayWidth, displayHeight, RGB);
+    
+    // If transitioning, update alpha
+    if (isTransitioning) {
+      transitionAlpha += 0.02; // Speed of transition
+      if (transitionAlpha >= 1) {
+        transitionAlpha = 1;
+        isTransitioning = false;
+      }
+    }
+    
+    // Blend the images
+    for (int i = 0; i < blended.pixels.length; i++) {
+      color camColor = currentCamImage.pixels[i];
+      color aiColor = currentAIImage.pixels[i];
+      blended.pixels[i] = lerpColor(camColor, aiColor, transitionAlpha);
+    }
+    
+    // If we already have a display image, allow it to be garbage collected
+    if (displayImage != null && displayImage != currentCamImage) {
+      // Remove reference to allow garbage collection
+      displayImage = null;
+    }
+    
+    displayImage = blended;
+  } else {
+    // If no AI image yet, just show camera
+    displayImage = currentCamImage;
+  }
+}
+
+void captureAndProcess() {
+  lastCaptureTime = millis();
+  requestInProgress = true;
+  requestStartTime = millis();
+  
+  // Save the current camera frame
+  String timestamp = getCurrentTimestamp();
+  String captureFilename = captureDir + "/capture_" + timestamp + ".jpg";
+  currentCamImage.save(dataPath(captureFilename));
+  
+  // Create the JSON payload for the request
+  JSONObject json = new JSONObject();
+  json.setString("model_version", modelVersion);
+  json.setString("input_image", dataPath(captureFilename));
+  
+  // Set the prompt with MY_SUBCONSCIOUS trigger if enabled
+  String promptToUse = currentPrompt;
+  if (addSubconsciousTrigger && !currentPrompt.equals("MY_SUBCONSCIOUS") && !currentPrompt.contains("MY_SUBCONSCIOUS")) {
+    promptToUse = "MY_SUBCONSCIOUS " + currentPrompt;
+  }
+  json.setString("prompt", promptToUse);
+  
+  // Format the prompt strength to 2 decimal places
+  float formattedPromptStrength = float(nf(promptStrength, 0, 2));
+  
+  // Continue with the rest of the parameters
+  json.setString("lora", "fofr_loras");
+  json.setInt("width", displayWidth);
+  json.setInt("height", displayHeight);
+  json.setString("image", encodeImageToBase64(captureFilename));
+  json.setBoolean("go_fast", goFast);
+  json.setFloat("lora_scale", loraScale);
+  json.setString("megapixels", megapixels);
+  json.setInt("num_outputs", numOutputs);
+  json.setString("aspect_ratio", aspectRatio);
+  json.setString("output_format", outputFormat);
+  json.setFloat("guidance_scale", guidanceScale);
+  json.setInt("output_quality", outputQuality);
+  json.setFloat("prompt_strength", formattedPromptStrength);
+  json.setFloat("extra_lora_scale", extraLoraScale);
+  json.setInt("num_inference_steps", numInferenceSteps);
+  
+  // Send to the Flask server in a separate thread to avoid blocking
+  Thread t = new Thread(new Runnable() {
+    public void run() {
+      sendToFlaskServer(json.toString());
+    }
+  });
+  t.setDaemon(true); // Make thread a daemon so it won't prevent app from exiting
+  t.start();
+}
+
+void sendToFlaskServer(String jsonPayload) {
+  try {
+    // Parse the JSON to get just the prompt and prompt strength for logging
+    JSONObject json = parseJSONObject(jsonPayload);
+    String prompt = json.getString("prompt");
+    float pStrength = json.getFloat("prompt_strength");
+    
+    // Print just the prompt and prompt strength
+    println("Sending request: prompt=\"" + prompt + "\", prompt_strength=" + nf(pStrength, 0, 2));
+    
+    // Build HTTP request
+    HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(serverUrl))
+      .header("Content-Type", "application/json")
+      .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+      .timeout(Duration.ofMinutes(1))
+      .build();
+    
+    // Send request
+    HttpResponse<String> response = httpClient.send(
+      request, HttpResponse.BodyHandlers.ofString());
+    
+    // Process the response
+    int statusCode = response.statusCode();
+    if (statusCode == 200) {
+      JSONObject jsonResponse = parseJSONObject(response.body());
+      if (jsonResponse != null && jsonResponse.getBoolean("success")) {
+        String outputUrl = jsonResponse.getString("output_url");
+        
+        // Download the image
+        String outputFilename = outputDir + "/fofr_" + getCurrentTimestamp() + ".png";
+        downloadImage(outputUrl, outputFilename);
+      } else {
+        println("Error in response: " + response.body());
+      }
+    } else {
+      println("HTTP error: " + statusCode);
+    }
+  } 
+  catch (Exception e) {
+    println("Error sending to server: " + e.getMessage());
+    e.printStackTrace();
+  }
+  
+  // Request is complete
+  requestInProgress = false;
+}
+
+String encodeImageToBase64(String imagePath) {
+  try {
+    // Load the image file
+    File file = new File(dataPath(imagePath));
+    FileInputStream fis = new FileInputStream(file);
+    byte[] data = new byte[(int) file.length()];
+    fis.read(data);
+    fis.close();
+    
+    // Convert to base64
+    String base64 = Base64.getEncoder().encodeToString(data);
+    return "data:image/jpeg;base64," + base64;
+  } 
+  catch (Exception e) {
+    println("Error encoding image: " + e.getMessage());
+    return "";
+  }
+}
+
+void downloadImage(String url, String outputFilename) {
+  try {
+    // Create HTTP request for the image
+    HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(url))
+      .GET()
+      .build();
+    
+    // Make sure the output directory exists
+    File outputDir = new File(dataPath(this.outputDir));
+    if (!outputDir.exists()) {
+      outputDir.mkdirs();
+    }
+    
+    // Get full path and ensure it's valid
+    Path outputPath = Paths.get(dataPath(outputFilename));
+    
+    try {
+      // Get the image as bytes using the HTTP client
+      HttpResponse<byte[]> response = httpClient.send(
+        request, HttpResponse.BodyHandlers.ofByteArray());
+      
+      // Check response
+      if (response.statusCode() == 200) {
+        // Save the bytes directly to a file using Files API
+        Files.write(outputPath, response.body());
+        
+        // Load the new AI image
+        PImage newAIImage = loadImage(outputPath.toString());
+        if (newAIImage != null) {
+          // Only clear the old image reference AFTER successfully loading the new one
+          PImage oldImage = currentAIImage;
+          currentAIImage = newAIImage;
+          isTransitioning = true;
+          transitionAlpha = 0;
+          
+          // Now it's safe to remove the old image reference
+          if (oldImage != null) {
+            oldImage = null; // Allow for garbage collection
+          }
+        } else {
+          println("Error: Failed to load saved image as PImage");
+        }
+      } else {
+        println("HTTP error: " + response.statusCode());
+      }
+    } catch (IOException e) {
+      println("I/O error saving image file: " + e.getMessage());
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      println("Request interrupted: " + e.getMessage());
+      e.printStackTrace();
+    }
+  } catch (Exception e) {
+    println("Error downloading image: " + e.getClass().getName() + " - " + e.getMessage());
+    e.printStackTrace();
+  }
+}
+
+void displayStatus() {
+  // Display status information as an overlay
+  fill(0, 150);
+  noStroke();
+  
+  if (showSettings) {
+    // Show expanded settings panel in the upper left
+    rect(10, 10, 300, 500); // Increased height to fit all settings and camera preview
+    
+    fill(255);
+    textSize(16);
+    text("aMiRROR - AI Subconscious Mirror", 20, 40);
+    textSize(14);
+    
+    // Main settings
+    text("Prompt: " + currentPrompt, 20, 70);
+    text("Trigger: " + (addSubconsciousTrigger ? "MY_SUBCONSCIOUS ON" : "OFF") + " (M to toggle)", 20, 90);
+    text("Model: " + modelVersion, 20, 110);
+    
+    // Camera settings
+    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 130);
+    
+    // Generation settings
+    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 150);
+    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 170);
+    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 190);
+    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 210);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 230);
+    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 250);
+    
+    // Advanced settings
+    text("Megapixels: " + megapixels, 20, 270);
+    text("Quality: " + outputQuality, 20, 290);
+    
+    // Status
+    if (requestInProgress) {
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 310);
+    } else {
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 310);
+    }
+    text("Press TAB to hide settings", 20, 330);
+    
+    // Show effective prompt if trigger is on
+    if (addSubconsciousTrigger && !currentPrompt.equals("MY_SUBCONSCIOUS") && !currentPrompt.contains("MY_SUBCONSCIOUS")) {
+      fill(200, 255, 200);
+      text("Will send: MY_SUBCONSCIOUS " + currentPrompt, 20, 350);
+      fill(255);
+    }
+    
+    // Add camera preview at 1/8 scale
+    if (currentCamImage != null) {
+      // Calculate preview dimensions (1/8 of actual size)
+      int previewWidth = currentCamImage.width / 8;
+      int previewHeight = currentCamImage.height / 8;
+      
+      // Draw border around preview
+      stroke(255);
+      noFill();
+      rect(20, 370, previewWidth, previewHeight);
+      
+      // Draw the camera preview
+      noStroke();
+      image(currentCamImage, 20, 370, previewWidth, previewHeight);
+    }
+  } else {
+    // Show minimal info in the upper left
+    rect(10, 10, 300, 110);
+    
+    fill(255);
+    textSize(14);
+    text("aMiRROR - AI Subconscious Mirror", 20, 30);
+    
+    // Show prompt and prompt strength
+    text("Prompt: " + currentPrompt, 20, 50);
+    text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
+    
+    // Show MY_SUBCONSCIOUS trigger status
+    if (addSubconsciousTrigger) {
+      fill(200, 255, 200);  // Light green color for active trigger
+      text("MY_SUBCONSCIOUS ON", 20, 90);
+      fill(255);  // Reset to white
+    }
+    
+    if (requestInProgress) {
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 110);
+    } else {
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 110);
+    }
+    
+    text("Press TAB for settings", 20, 130);
+  }
+}
+
+// Handle keypresses for changing prompts or other settings
+void keyPressed() {
+  if (key == 's' || key == 'S') {
+    // Force a new capture
+    captureAndProcess();
+  } else if (key == 'p' || key == 'P') {
+    // Cycle to next prompt
+    currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
+    currentPrompt = prompts[currentPromptIndex];
+  } else if (key == ' ') {
+    // Toggle between camera and AI view
+    transitionAlpha = (transitionAlpha > 0.5) ? 0 : 1;
+  } else if (key == TAB) {
+    // Toggle settings display
+    showSettings = !showSettings;
+  } else if (key == 'f' || key == 'F') {
+    // Toggle fast mode
+    goFast = !goFast;
+  } else if (key == 'm' || key == 'M') {
+    // Toggle adding MY_SUBCONSCIOUS to prompts
+    addSubconsciousTrigger = !addSubconsciousTrigger;
+  } else if (key >= '1' && key <= '9') {
+    // Set prompt strength based on number key (1-9 maps to 0.1-0.9)
+    promptStrength = (key - '0') * 0.1;
+  } else if (key == '+' || key == '=') {
+    promptStrength = constrain(promptStrength + 0.01, 0, 1);
+  } else if (key == '-' || key == '_') {
+    promptStrength = constrain(promptStrength - 0.01, 0, 1);
+  }
+  
+  // Check for letter + arrow key combinations first
+  if (keyCode == UP) {
+    if (key == 'l' || key == 'L') {
+      loraScale = constrain(loraScale + 0.1, 0, 2);
+    } else if (key == 'e' || key == 'E') {
+      extraLoraScale = constrain(extraLoraScale + 0.1, 0, 2);
+    } else {
+      numInferenceSteps = constrain(numInferenceSteps + 1, 1, 50);
+    }
+  } else if (keyCode == DOWN) {
+    if (key == 'l' || key == 'L') {
+      loraScale = constrain(loraScale - 0.1, 0, 2);
+    } else if (key == 'e' || key == 'E') {
+      extraLoraScale = constrain(extraLoraScale - 0.1, 0, 2);
+    } else {
+      numInferenceSteps = constrain(numInferenceSteps - 1, 1, 50);
+    }
+  } else if (keyCode == LEFT) {
+    guidanceScale = constrain(guidanceScale - 0.01, 0, 10);
+  } else if (keyCode == RIGHT) {
+    guidanceScale = constrain(guidanceScale + 0.01, 0, 10);
+  }
+}
+
+// Add this method to explicitly clean up resources when the app is closed
+void exit() {
+  // Close the camera if it's running
+  if (cam != null) {
+    cam.stop();
+  }
+  
+  // Call the super method to finish exiting
+  super.exit();
+}
+
+// Helper method to get a formatted timestamp string
+String getCurrentTimestamp() {
+  return dateFormat.format(new Date());
+} 
