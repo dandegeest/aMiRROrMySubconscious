@@ -48,8 +48,7 @@ String[] availableModels;
 int currentModelIndex = 0;
 
 // Replicate model parameters
-String currentPrompt = "MY_SUBCONSCIOUS";
-boolean addSubconsciousTrigger = false; // Whether to add MY_SUBCONSCIOUS trigger to prompts
+String currentPrompt = "A reflection of a person in a mirror";
 String modelVersion = "mysubconscious";  // Default model version
 boolean goFast = false;
 float loraScale = 1.0;
@@ -145,8 +144,12 @@ void draw() {
   }
   
   // Display the current image
-  image(currentCamImage, 0, 0, width, height);
-  tint(255, 225);
+  if (currentCamImage != null) {
+    image(currentCamImage, 0, 0, width, height);
+    tint(255, 225);
+  }
+  else noTint();
+  
   image(displayImage, 0, 0, width, height);
   
   // Display status information
@@ -308,9 +311,6 @@ void captureAndProcess() {
   
   // Set the prompt with MY_SUBCONSCIOUS trigger if enabled
   String promptToUse = currentPrompt;
-  if (addSubconsciousTrigger && !currentPrompt.equals("MY_SUBCONSCIOUS") && !currentPrompt.contains("MY_SUBCONSCIOUS")) {
-    promptToUse = "MY_SUBCONSCIOUS " + currentPrompt;
-  }
   json.setString("prompt", promptToUse);
   
   // Format the prompt strength to 2 decimal places
@@ -491,40 +491,32 @@ void displayStatus() {
     
     // Main settings
     text("Prompt: " + currentPrompt, 20, 70);
-    text("Trigger: " + (addSubconsciousTrigger ? "MY_SUBCONSCIOUS ON" : "OFF") + " (T to toggle)", 20, 90);
-    text("Model: " + modelVersion + " (M to cycle)", 20, 110);
+    text("Model: " + modelVersion + " (M to cycle)", 20, 90);
     
     // Camera settings
-    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 130);
+    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 110);
     
     // Generation settings
-    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 150);
-    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 170);
-    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 190);
-    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 210);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 230);
-    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 250);
+    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 130);
+    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 150);
+    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 170);
+    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 190);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 210);
+    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 230);
     
     // Advanced settings
-    text("Megapixels: " + megapixels, 20, 270);
-    text("Quality: " + outputQuality, 20, 290);
+    text("Megapixels: " + megapixels, 20, 250);
+    text("Quality: " + outputQuality, 20, 270);
     
     // Status
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 310);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 290);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 310);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 290);
     }
-    text("Press TAB to hide settings", 20, 330);
+    text("Press TAB to hide settings", 20, 310);
     
-    // Show effective prompt if trigger is on
-    if (addSubconsciousTrigger && !currentPrompt.equals("MY_SUBCONSCIOUS") && !currentPrompt.contains("MY_SUBCONSCIOUS")) {
-      fill(200, 255, 200);
-      text("Will send: MY_SUBCONSCIOUS " + currentPrompt, 20, 350);
-      fill(255);
-    }
-    
-    // Add camera preview at 1/8 scale
+    // Show camera preview at 1/8 scale
     if (currentCamImage != null) {
       // Calculate preview dimensions (1/8 of actual size)
       int previewWidth = currentCamImage.width / 8;
@@ -533,11 +525,11 @@ void displayStatus() {
       // Draw border around preview
       stroke(255);
       noFill();
-      rect(20, 370, previewWidth, previewHeight);
+      rect(20, 330, previewWidth, previewHeight);
       
       // Draw the camera preview
       noStroke();
-      image(currentCamImage, 20, 370, previewWidth, previewHeight);
+      image(currentCamImage, 20, 330, previewWidth, previewHeight);
     }
   } else {
     // Show minimal info in the upper left
@@ -552,17 +544,10 @@ void displayStatus() {
     text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
     text("Model: " + modelVersion, 20, 90);
     
-    // Show MY_SUBCONSCIOUS trigger status
-    if (addSubconsciousTrigger) {
-      fill(200, 255, 200);  // Light green color for active trigger
-      text("MY_SUBCONSCIOUS ON", 20, 110);
-      fill(255);  // Reset to white
-    }
-    
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 130);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 110);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 130);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 110);
     }
   }
 }
@@ -595,9 +580,6 @@ void keyPressed() {
       modelVersion = availableModels[currentModelIndex];
       println("Switched to model:", modelVersion);
     }
-  } else if (key == 't' || key == 'T') {
-    // Toggle MY_SUBCONSCIOUS trigger
-    addSubconsciousTrigger = !addSubconsciousTrigger;
   } else if (key >= '1' && key <= '9') {
     // Set prompt strength based on number key (1-9 maps to 0.1-0.9)
     promptStrength = (key - '0') / 10.0;

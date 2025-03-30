@@ -36,10 +36,36 @@ DEFAULT_PARAMS = {
     "num_inference_steps": 4
 }
 
-# Map friendly names to model version IDs
+# Map friendly names to model version IDs and trigger words
 MODEL_VERSIONS = {
-    "mysubconscious": "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9",
-    "klingon": "4cff954216285e54af8831b40d19cadd696e849f3d6840de59a77add698775eb"
+    "mysubconscious": {
+        "version_id": "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9",
+        "trigger": "MY_SUBCONSCIOUS"
+    },
+    "klingon": {
+        "version_id": "4cff954216285e54af8831b40d19cadd696e849f3d6840de59a77add698775eb",
+        "trigger": "KLINGON"
+    },
+    "minecraft": {
+        "version_id": "23cd3151875f9caf78b022d9409425d04e3a5b0fa093d07590b37d3f98fef682",
+        "trigger": "MNCRFTMOV"
+    },
+    "weird": {
+        "version_id": "a731522059fe08264e0403847198ed5fa29973e0a0a594b45d7e0244f943f3ee",
+        "trigger": "WRD"
+    },
+    "spittingimage": {
+        "version_id": "151060b63f5e1a3c7679b43e060253f6be0e9b1e4af9a3e5adf15061e7fd6cf0",
+        "trigger": "spitting image"
+    },
+    "jameswebb": {
+        "version_id": "7b2411574454fb1a1b4e3087f48dcb138cd5e0d3d4d901be2cbb903fa71abd19",
+        "trigger": "JWST"
+    },
+    "cyberpunk": {
+        "version_id": "5d0cefd0746b833042b384c3a310bc4d1f9d1304ec59ba93e75097d40b967180",
+        "trigger": "cyber"
+    }
 }
 
 # Valid model values for direct use
@@ -79,10 +105,18 @@ def generate():
 
         # If model_version is provided, use its version ID and set model to "schnell"
         if model_version_name:
-            model_version = MODEL_VERSIONS.get(model_version_name)
-            if not model_version:
+            model_info = MODEL_VERSIONS.get(model_version_name)
+            if not model_info:
                 return jsonify({"success": False, "error": f"Unknown model version: {model_version_name}"}), 400
+            model_version = model_info["version_id"]
             model_params["model"] = "schnell"
+            
+            # Add the trigger word to the prompt if it exists
+            trigger = model_info.get("trigger")
+            if trigger:
+                prompt = model_params.get("prompt", "")
+                if not prompt.startswith(trigger):
+                    model_params["prompt"] = f"{trigger} {prompt}".strip()
         else:
             # No model_version provided, check if model is valid
             if model_name not in VALID_MODELS:
