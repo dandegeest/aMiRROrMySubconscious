@@ -19,7 +19,7 @@ if not REPLICATE_API_TOKEN:
 
 # Global default parameters
 DEFAULT_PARAMS = {
-    "model": "schnell",
+    "model": "schnell",  # Default model
     "width": 720,
     "height": 1280,
     "prompt": "MY_SUBCONSCIOUS",
@@ -36,6 +36,15 @@ DEFAULT_PARAMS = {
     "num_inference_steps": 4
 }
 
+# Map friendly names to model version IDs
+MODEL_VERSIONS = {
+    "mysubconscious": "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9",
+    "klingon": "4cff954216285e54af8831b40d19cadd696e849f3d6840de59a77add698775eb"
+}
+
+# Valid model values for direct use
+VALID_MODELS = ["schnell", "dev"]
+
 @app.route("/generate", methods=["POST"])
 def generate():
     # Get request data
@@ -46,14 +55,13 @@ def generate():
     
     # Map Processing parameter names to server parameter names
     param_mapping = {
-        "model_version": "model",
         "input_image": "image"
     }
     
     # Update parameters from request data, handling mapped names
     for key, value in data.items():
         target_key = param_mapping.get(key, key)
-        if target_key in model_params or target_key == "image":
+        if target_key in model_params or target_key == "image" or target_key == "model_version":
             model_params[target_key] = value
     
     # Add any additional parameters that aren't in defaults but are needed
@@ -65,7 +73,27 @@ def generate():
     temp_file = None
     
     try:
-        # Handle different image input types
+        # Handle model selection
+        model_version_name = model_params.pop("model_version", None)
+        model_name = model_params.get("model", "schnell")
+
+        # If model_version is provided, use its version ID and set model to "schnell"
+        if model_version_name:
+            model_version = MODEL_VERSIONS.get(model_version_name)
+            if not model_version:
+                return jsonify({"success": False, "error": f"Unknown model version: {model_version_name}"}), 400
+            model_params["model"] = "schnell"
+        else:
+            # No model_version provided, check if model is valid
+            if model_name not in VALID_MODELS:
+                return jsonify({"success": False, "error": f"Invalid model: {model_name}. Must be one of: {', '.join(VALID_MODELS)}"}), 400
+            # Use the default version ID for the selected model
+            model_version = "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9"
+
+        # Process image if provided
+        image_data = model_params.get("image")
+        temp_file = None
+        
         if image_data:
             if image_data.startswith("http"):
                 # Download image from URL
@@ -96,6 +124,7 @@ def generate():
         
         # Print the parameters being sent (for debugging)
         print("Sending parameters to Replicate:", model_params)
+        print("Using model version:", model_version)
         
         # Call Replicate API directly
         headers = {
@@ -105,7 +134,7 @@ def generate():
         }
         
         payload = {
-            "version": "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9",
+            "version": model_version,
             "input": model_params
         }
         
@@ -135,7 +164,7 @@ def generate():
                 "prediction_id": result.get("id"),
                 "status": result.get("status")
             })
-        
+            
     except Exception as e:
         print("Error in generate:", str(e))  # Add error logging
         return jsonify({"success": False, "error": str(e)}), 500
@@ -177,6 +206,11 @@ def get_defaults():
 @app.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "healthy"})
+
+@app.route("/models", methods=["GET"])
+def get_models():
+    """Get the list of available models"""
+    return jsonify(list(MODEL_VERSIONS.keys()))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

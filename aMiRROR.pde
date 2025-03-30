@@ -37,16 +37,20 @@ String outputDir = "myconscious";
 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
 
 // Server settings
-String serverUrl = "http://localhost:5000/generate";
+String serverUrl = "http://localhost:5000";
 String configUrl = "http://localhost:5000/config/defaults";
 
 // HTTP Client
 HttpClient httpClient;
 
+// Model cycling
+String[] availableModels;
+int currentModelIndex = 0;
+
 // Replicate model parameters
 String currentPrompt = "MY_SUBCONSCIOUS";
 boolean addSubconsciousTrigger = false; // Whether to add MY_SUBCONSCIOUS trigger to prompts
-String modelVersion = "schnell";
+String modelVersion = "mysubconscious";  // Default model version
 boolean goFast = false;
 float loraScale = 1.0;
 String megapixels = "1";
@@ -101,6 +105,9 @@ void setup() {
                .version(HttpClient.Version.HTTP_1_1)
                .connectTimeout(Duration.ofSeconds(30))
                .build();
+               
+  // Fetch available models
+  fetchAvailableModels();
   
   // Create a blank display image
   displayImage = createImage(displayWidth, displayHeight, RGB);
@@ -342,16 +349,16 @@ void sendToFlaskServer(String jsonPayload) {
     JSONObject json = parseJSONObject(jsonPayload);
     String prompt = json.getString("prompt");
     float pStrength = json.getFloat("prompt_strength");
+    String model = json.getString("model_version");
     
     // Print just the prompt and prompt strength
-    println("Sending request: prompt=\"" + prompt + "\", prompt_strength=" + nf(pStrength, 0, 2));
+    println("Sending request: model=\"" + model + "\", prompt=\"" + prompt + "\", prompt_strength=" + nf(pStrength, 0, 2));
     
-    // Build HTTP request
+    // Build the request
     HttpRequest request = HttpRequest.newBuilder()
-      .uri(URI.create(serverUrl))
+      .uri(URI.create(serverUrl + "/generate"))
       .header("Content-Type", "application/json")
       .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-      .timeout(Duration.ofMinutes(1))
       .build();
     
     // Send request
@@ -484,8 +491,8 @@ void displayStatus() {
     
     // Main settings
     text("Prompt: " + currentPrompt, 20, 70);
-    text("Trigger: " + (addSubconsciousTrigger ? "MY_SUBCONSCIOUS ON" : "OFF") + " (M to toggle)", 20, 90);
-    text("Model: " + modelVersion, 20, 110);
+    text("Trigger: " + (addSubconsciousTrigger ? "MY_SUBCONSCIOUS ON" : "OFF") + " (T to toggle)", 20, 90);
+    text("Model: " + modelVersion + " (M to cycle)", 20, 110);
     
     // Camera settings
     text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 130);
@@ -534,7 +541,7 @@ void displayStatus() {
     }
   } else {
     // Show minimal info in the upper left
-    rect(10, 10, 300, 110);
+    rect(10, 10, 300, 130);
     
     fill(255);
     textSize(14);
@@ -543,21 +550,20 @@ void displayStatus() {
     // Show prompt and prompt strength
     text("Prompt: " + currentPrompt, 20, 50);
     text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
+    text("Model: " + modelVersion, 20, 90);
     
     // Show MY_SUBCONSCIOUS trigger status
     if (addSubconsciousTrigger) {
       fill(200, 255, 200);  // Light green color for active trigger
-      text("MY_SUBCONSCIOUS ON", 20, 90);
+      text("MY_SUBCONSCIOUS ON", 20, 110);
       fill(255);  // Reset to white
     }
     
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 110);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 130);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 110);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 130);
     }
-    
-    text("Press TAB for settings", 20, 130);
   }
 }
 
@@ -583,11 +589,19 @@ void keyPressed() {
     // Toggle fast mode
     goFast = !goFast;
   } else if (key == 'm' || key == 'M') {
-    // Toggle adding MY_SUBCONSCIOUS to prompts
+    // Cycle through available models
+    if (availableModels != null && availableModels.length > 0) {
+      currentModelIndex = (currentModelIndex + 1) % availableModels.length;
+      modelVersion = availableModels[currentModelIndex];
+      println("Switched to model:", modelVersion);
+    }
+  } else if (key == 't' || key == 'T') {
+    // Toggle MY_SUBCONSCIOUS trigger
     addSubconsciousTrigger = !addSubconsciousTrigger;
   } else if (key >= '1' && key <= '9') {
     // Set prompt strength based on number key (1-9 maps to 0.1-0.9)
-    promptStrength = (key - '0') * 0.1;
+    promptStrength = (key - '0') / 10.0;
+    println("Set prompt strength to:", nf(promptStrength, 0, 1));
   } else if (key == '+' || key == '=') {
     promptStrength = constrain(promptStrength + 0.01, 0, 1);
   } else if (key == '-' || key == '_') {
@@ -683,4 +697,35 @@ void exit() {
 // Helper method to get a formatted timestamp string
 String getCurrentTimestamp() {
   return dateFormat.format(new Date());
+}
+
+void fetchAvailableModels() {
+  try {
+    // Create HTTP request for models
+    HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(serverUrl + "/models"))
+      .GET()
+      .build();
+    
+    // Send request and get response
+    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    
+    if (response.statusCode() == 200) {
+      // Parse JSON response
+      JSONArray models = parseJSONArray(response.body());
+      availableModels = new String[models.size()];
+      for (int i = 0; i < models.size(); i++) {
+        availableModels[i] = models.getString(i);
+      }
+      println("Available models:", join(availableModels, ", "));
+    } else {
+      println("Error fetching models:", response.statusCode());
+      // Fallback to default model if server request fails
+      availableModels = new String[]{"mysubconscious"};
+    }
+  } catch (Exception e) {
+    println("Error fetching models:", e.getMessage());
+    // Fallback to default model if server request fails
+    availableModels = new String[]{"mysubconscious"};
+  }
 } 
