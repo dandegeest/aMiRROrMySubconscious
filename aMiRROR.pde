@@ -74,6 +74,13 @@ String[] prompts = {
 };
 int currentPromptIndex = 0;
 
+// Add this variable with the other boolean state variables (around line 43-44)
+boolean showStatusDisplay = true;
+
+// Add these variables at the beginning near other image variables
+PImage blendedBuffer = null;
+PImage processedImageBuffer = null;
+
 void setup() {
   // Set up the display in landscape mode
   size(1280, 720);
@@ -130,6 +137,8 @@ void draw() {
   }
   
   // Display the current image
+  image(currentCamImage, 0, 0, width, height);
+  tint(255, 225);
   image(displayImage, 0, 0, width, height);
   
   // Display status information
@@ -182,8 +191,10 @@ void initializeCamera() {
 }
 
 PImage processImage(Capture camImage) {
-  // Create an image with the target display dimensions
-  PImage result = createImage(displayWidth, displayHeight, RGB);
+  // Create an image with the target display dimensions only once
+  if (processedImageBuffer == null) {
+    processedImageBuffer = createImage(displayWidth, displayHeight, RGB);
+  }
   
   // Calculate scaling to maintain aspect ratio and center crop
   float aspectRatio1 = (float)displayWidth / (float)displayHeight;
@@ -209,41 +220,61 @@ PImage processImage(Capture camImage) {
   }
   
   // Resize and crop the camera image to fit the display
-  result.copy(camImage, sourceX, sourceY, sourceWidth, sourceHeight, 
+  processedImageBuffer.copy(camImage, sourceX, sourceY, sourceWidth, sourceHeight, 
                0, 0, displayWidth, displayHeight);
   
-  return result;
+  return processedImageBuffer;
 }
 
 void updateDisplay() {
   // Handle transition between camera and AI images
   if (currentAIImage != null) {
-    // We have an AI image, blend with camera
-    PImage blended = createImage(displayWidth, displayHeight, RGB);
-    
-    // If transitioning, update alpha
-    if (isTransitioning) {
-      transitionAlpha += 0.02; // Speed of transition
-      if (transitionAlpha >= 1) {
-        transitionAlpha = 1;
-        isTransitioning = false;
+    try {
+      // Create a local reference to avoid race conditions
+      PImage aiImageRef = currentAIImage;
+      
+      // We have an AI image, blend with camera
+      // Create blendedBuffer only once and reuse it
+      if (blendedBuffer == null) {
+        blendedBuffer = createImage(displayWidth, displayHeight, RGB);
       }
+      
+      // If transitioning, update alpha
+      if (isTransitioning) {
+        transitionAlpha += 0.02; // Speed of transition
+        if (transitionAlpha >= 1) {
+          transitionAlpha = 1;
+          isTransitioning = false;
+        }
+      }
+      
+      // Additional null check for currentCamImage
+      if (currentCamImage == null) return;
+      
+      // Make sure both images have pixels loaded
+      currentCamImage.loadPixels();
+      aiImageRef.loadPixels();
+      blendedBuffer.loadPixels();
+      
+      // Blend the images with safer access
+      for (int i = 0; i < blendedBuffer.pixels.length; i++) {
+        // Add bounds check to avoid index issues
+        if (i < currentCamImage.pixels.length && i < aiImageRef.pixels.length) {
+          color camColor = currentCamImage.pixels[i];
+          color aiColor = aiImageRef.pixels[i];
+          blendedBuffer.pixels[i] = lerpColor(camColor, aiColor, transitionAlpha);
+        }
+      }
+      blendedBuffer.updatePixels();
+      
+      // Simply point to our buffer instead of creating a new image
+      displayImage = blendedBuffer;
+    } catch (Exception e) {
+      // Log the error and gracefully handle it
+      println("Error in updateDisplay: " + e.getMessage());
+      // Fall back to showing just the camera image
+      displayImage = currentCamImage;
     }
-    
-    // Blend the images
-    for (int i = 0; i < blended.pixels.length; i++) {
-      color camColor = currentCamImage.pixels[i];
-      color aiColor = currentAIImage.pixels[i];
-      blended.pixels[i] = lerpColor(camColor, aiColor, transitionAlpha);
-    }
-    
-    // If we already have a display image, allow it to be garbage collected
-    if (displayImage != null && displayImage != currentCamImage) {
-      // Remove reference to allow garbage collection
-      displayImage = null;
-    }
-    
-    displayImage = blended;
   } else {
     // If no AI image yet, just show camera
     displayImage = currentCamImage;
@@ -251,6 +282,9 @@ void updateDisplay() {
 }
 
 void captureAndProcess() {
+  // Request garbage collection before starting a new capture cycle
+  System.gc();
+  
   lastCaptureTime = millis();
   requestInProgress = true;
   requestStartTime = millis();
@@ -334,6 +368,7 @@ void sendToFlaskServer(String jsonPayload) {
         // Download the image
         String outputFilename = outputDir + "/fofr_" + getCurrentTimestamp() + ".png";
         downloadImage(outputUrl, outputFilename);
+        lastCaptureTime = millis(); // Make sure the image displays for 5 seconds if request took longer
       } else {
         println("Error in response: " + response.body());
       }
@@ -396,18 +431,20 @@ void downloadImage(String url, String outputFilename) {
         // Save the bytes directly to a file using Files API
         Files.write(outputPath, response.body());
         
-        // Load the new AI image
+        // Load the new AI image first, before clearing the old one
         PImage newAIImage = loadImage(outputPath.toString());
+        
         if (newAIImage != null) {
-          // Only clear the old image reference AFTER successfully loading the new one
-          PImage oldImage = currentAIImage;
-          currentAIImage = newAIImage;
-          isTransitioning = true;
-          transitionAlpha = 0;
-          
-          // Now it's safe to remove the old image reference
-          if (oldImage != null) {
-            oldImage = null; // Allow for garbage collection
+          // Only after successfully loading the new image, update references
+          synchronized(this) {
+            // Clear old reference first
+            currentAIImage = null;
+            System.gc(); // Request garbage collection
+            
+            // Now set the new image
+            currentAIImage = newAIImage;
+            isTransitioning = true;
+            transitionAlpha = 0;
           }
         } else {
           println("Error: Failed to load saved image as PImage");
@@ -429,6 +466,9 @@ void downloadImage(String url, String outputFilename) {
 }
 
 void displayStatus() {
+  // Only display status if showStatusDisplay is true
+  if (!showStatusDisplay) return;
+  
   // Display status information as an overlay
   fill(0, 150);
   noStroke();
@@ -536,6 +576,9 @@ void keyPressed() {
   } else if (key == TAB) {
     // Toggle settings display
     showSettings = !showSettings;
+  } else if (key == 'd' || key == 'D') {
+    // Toggle status display visibility
+    showStatusDisplay = !showStatusDisplay;
   } else if (key == 'f' || key == 'F') {
     // Toggle fast mode
     goFast = !goFast;
@@ -581,6 +624,16 @@ void exit() {
   if (cam != null) {
     cam.stop();
   }
+  
+  // Release image resources
+  currentCamImage = null;
+  currentAIImage = null;
+  displayImage = null;
+  blendedBuffer = null;
+  processedImageBuffer = null;
+  
+  // Request garbage collection
+  System.gc();
   
   // Call the super method to finish exiting
   super.exit();

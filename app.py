@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import replicate
 import os
 import requests
@@ -17,29 +17,33 @@ REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN")
 if not REPLICATE_API_TOKEN:
     print("Warning: REPLICATE_API_TOKEN not set in environment")
 
+# Global default parameters
+DEFAULT_PARAMS = {
+    "model": "schnell",
+    "width": 720,
+    "height": 1280,
+    "prompt": "MY_SUBCONSCIOUS",
+    "go_fast": False,
+    "lora_scale": 1,
+    "megapixels": "1",
+    "num_outputs": 1,
+    "aspect_ratio": "custom",
+    "output_format": "png",
+    "guidance_scale": 3,
+    "output_quality": 80,
+    "prompt_strength": 0.8,
+    "extra_lora_scale": 1,
+    "num_inference_steps": 4
+}
+
 @app.route("/generate", methods=["POST"])
 def generate():
     # Get request data
     data = request.get_json() or {}
     
-    # Get model parameters with defaults
-    model_params = {
-        "model": data.get("model", "schnell"),
-        "width": data.get("width", 720),
-        "height": data.get("height", 1280),
-        "prompt": data.get("prompt", "MY_SUBCONSCIOUS"),
-        "go_fast": data.get("go_fast", False),
-        "lora_scale": data.get("lora_scale", 1),
-        "megapixels": data.get("megapixels", "1"),
-        "num_outputs": data.get("num_outputs", 1),
-        "aspect_ratio": data.get("aspect_ratio", "custom"),
-        "output_format": data.get("output_format", "png"),
-        "guidance_scale": data.get("guidance_scale", 3),
-        "output_quality": data.get("output_quality", 80),
-        "prompt_strength": data.get("prompt_strength", 0.8),
-        "extra_lora_scale": data.get("extra_lora_scale", 1),
-        "num_inference_steps": data.get("num_inference_steps", 4)
-    }
+    # Get model parameters with defaults from global DEFAULT_PARAMS
+    model_params = DEFAULT_PARAMS.copy()
+    model_params.update({k: v for k, v in data.items() if k in DEFAULT_PARAMS})
     
     # Process image if provided
     image_data = data.get("image")
@@ -114,6 +118,32 @@ def generate():
                 os.unlink(temp_file.name)
             except:
                 pass
+
+@app.route("/config", methods=["GET", "POST"])
+def config():
+    global DEFAULT_PARAMS
+    
+    if request.method == "POST":
+        try:
+            new_params = request.get_json()
+            # Update only existing parameters
+            for key in DEFAULT_PARAMS:
+                if key in new_params:
+                    DEFAULT_PARAMS[key] = new_params[key]
+            return jsonify({"success": True, "params": DEFAULT_PARAMS})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 400
+    
+    # GET request - render the configuration page
+    return render_template(
+        'config.html', 
+        params=DEFAULT_PARAMS
+    )
+
+@app.route("/config/defaults", methods=["GET"])
+def get_defaults():
+    """Get the current default parameters in JSON format"""
+    return jsonify(DEFAULT_PARAMS)
 
 @app.route("/health", methods=["GET"])
 def health_check():

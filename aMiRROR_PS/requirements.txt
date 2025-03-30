@@ -1,4 +1,0 @@
-flask==2.3.2
-replicate==0.21.0
-requests==2.31.0
-python-dotenv==1.0.0 

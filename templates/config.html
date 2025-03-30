@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>aMiRROR Configuration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .success {
+            color: #4CAF50;
+            margin-top: 10px;
+        }
+        .error {
+            color: #f44336;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>aMiRROR Configuration</h1>
+    <form id="configForm">
+        {% for key, value in params.items() %}
+        <div class="form-group">
+            <label for="{{ key }}">{{ key.replace('_', ' ').title() }}</label>
+            {% if value is boolean %}
+                <select name="{{ key }}" id="{{ key }}">
+                    <option value="true" {% if value %}selected{% endif %}>True</option>
+                    <option value="false" {% if not value %}selected{% endif %}>False</option>
+                </select>
+            {% else %}
+                <input type="{{ 'number' if value is number else 'text' }}"
+                       id="{{ key }}" name="{{ key }}"
+                       value="{{ value }}"
+                       step="{{ '0.1' if value|float is defined else '1' if value|int is defined else None }}">
+            {% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit">Save Configuration</button>
+    </form>
+    <div id="message"></div>
+
+    <script>
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+                if (value === 'true') value = true;
+                else if (value === 'false') value = false;
+                else if (!isNaN(value) && value !== '') {
+                    value = value.includes('.') ? parseFloat(value) : parseInt(value);
+                }
+                data[key] = value;
+            }
+            
+            try {
+                const response = await fetch('/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                const messageDiv = document.getElementById('message');
+                if (result.success) {
+                    messageDiv.className = 'success';
+                    messageDiv.textContent = 'Configuration saved successfully!';
+                } else {
+                    messageDiv.className = 'error';
+                    messageDiv.textContent = 'Error saving configuration: ' + result.error;
+                }
+            } catch (error) {
+                const messageDiv = document.getElementById('message');
+                messageDiv.className = 'error';
+                messageDiv.textContent = 'Error saving configuration: ' + error;
+            }
+        });
+    </script>
+</body>
+</html> 
