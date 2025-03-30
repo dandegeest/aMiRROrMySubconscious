@@ -38,6 +38,7 @@ SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
 
 // Server settings
 String serverUrl = "http://localhost:5000/generate";
+String configUrl = "http://localhost:5000/config/defaults";
 
 // HTTP Client
 HttpClient httpClient;
@@ -297,7 +298,6 @@ void captureAndProcess() {
   // Create the JSON payload for the request
   JSONObject json = new JSONObject();
   json.setString("model_version", modelVersion);
-  json.setString("input_image", dataPath(captureFilename));
   
   // Set the prompt with MY_SUBCONSCIOUS trigger if enabled
   String promptToUse = currentPrompt;
@@ -396,7 +396,7 @@ String encodeImageToBase64(String imagePath) {
     
     // Convert to base64
     String base64 = Base64.getEncoder().encodeToString(data);
-    return "data:image/jpeg;base64," + base64;
+    return "data:image/png;base64," + base64;  // Change to PNG format
   } 
   catch (Exception e) {
     println("Error encoding image: " + e.getMessage());
@@ -592,6 +592,9 @@ void keyPressed() {
     promptStrength = constrain(promptStrength + 0.01, 0, 1);
   } else if (key == '-' || key == '_') {
     promptStrength = constrain(promptStrength - 0.01, 0, 1);
+  } else if (key == 'r' || key == 'R') {
+    // Reset to server defaults
+    fetchAndApplyDefaults();
   }
   
   // Check for letter + arrow key combinations first
@@ -615,6 +618,44 @@ void keyPressed() {
     guidanceScale = constrain(guidanceScale - 0.01, 0, 10);
   } else if (keyCode == RIGHT) {
     guidanceScale = constrain(guidanceScale + 0.01, 0, 10);
+  }
+}
+
+void fetchAndApplyDefaults() {
+  try {
+    // Create HTTP request for defaults
+    HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(configUrl))
+      .GET()
+      .build();
+    
+    // Send request and get response
+    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    
+    if (response.statusCode() == 200) {
+      // Parse JSON response
+      JSONObject json = parseJSONObject(response.body());
+      
+      // Update all model parameters from defaults
+      modelVersion = json.getString("model", modelVersion);
+      goFast = json.getBoolean("go_fast", goFast);
+      loraScale = json.getFloat("lora_scale", loraScale);
+      megapixels = json.getString("megapixels", megapixels);
+      numOutputs = json.getInt("num_outputs", numOutputs);
+      aspectRatio = json.getString("aspect_ratio", aspectRatio);
+      outputFormat = json.getString("output_format", outputFormat);
+      guidanceScale = json.getFloat("guidance_scale", guidanceScale);
+      outputQuality = json.getInt("output_quality", outputQuality);
+      promptStrength = json.getFloat("prompt_strength", promptStrength);
+      extraLoraScale = json.getFloat("extra_lora_scale", extraLoraScale);
+      numInferenceSteps = json.getInt("num_inference_steps", numInferenceSteps);
+      
+      println("Successfully synced parameters with server defaults");
+    } else {
+      println("Error fetching defaults: " + response.statusCode());
+    }
+  } catch (Exception e) {
+    println("Error fetching defaults: " + e.getMessage());
   }
 }
 

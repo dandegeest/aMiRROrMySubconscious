@@ -41,12 +41,27 @@ def generate():
     # Get request data
     data = request.get_json() or {}
     
-    # Get model parameters with defaults from global DEFAULT_PARAMS
+    # Create a clean copy of defaults
     model_params = DEFAULT_PARAMS.copy()
-    model_params.update({k: v for k, v in data.items() if k in DEFAULT_PARAMS})
+    
+    # Map Processing parameter names to server parameter names
+    param_mapping = {
+        "model_version": "model",
+        "input_image": "image"
+    }
+    
+    # Update parameters from request data, handling mapped names
+    for key, value in data.items():
+        target_key = param_mapping.get(key, key)
+        if target_key in model_params or target_key == "image":
+            model_params[target_key] = value
+    
+    # Add any additional parameters that aren't in defaults but are needed
+    if "lora" in data:
+        model_params["lora"] = data["lora"]
     
     # Process image if provided
-    image_data = data.get("image")
+    image_data = model_params.get("image")
     temp_file = None
     
     try:
@@ -65,15 +80,23 @@ def generate():
                     model_params["image"] = f"data:image/png;base64,{encoded_image}"
                 
             elif image_data.startswith("data:image"):
-                # Already base64 encoded
-                model_params["image"] = image_data
+                # Already base64 encoded - ensure it's marked as PNG
+                if "data:image/jpeg;base64," in image_data:
+                    model_params["image"] = image_data.replace("data:image/jpeg;base64,", "data:image/png;base64,")
                 
-            elif os.path.exists(image_data):
-                # Local file path, encode to base64
-                with open(image_data, "rb") as img_file:
-                    encoded_image = base64.b64encode(img_file.read()).decode('utf-8')
-                    model_params["image"] = f"data:image/png;base64,{encoded_image}"
-                
+            else:
+                # Treat as local file path, encode to base64
+                try:
+                    with open(image_data, "rb") as img_file:
+                        encoded_image = base64.b64encode(img_file.read()).decode('utf-8')
+                        model_params["image"] = f"data:image/png;base64,{encoded_image}"
+                except Exception as e:
+                    print(f"Error reading image file {image_data}: {str(e)}")
+                    return jsonify({"success": False, "error": f"Could not read image file: {str(e)}"}), 400
+        
+        # Print the parameters being sent (for debugging)
+        print("Sending parameters to Replicate:", model_params)
+        
         # Call Replicate API directly
         headers = {
             "Authorization": f"Bearer {REPLICATE_API_TOKEN}",
@@ -92,6 +115,11 @@ def generate():
             json=payload
         )
         
+        if response.status_code == 422:
+            error_detail = response.json().get("detail", "Unknown error")
+            print("Replicate API validation error:", error_detail)
+            return jsonify({"success": False, "error": f"API validation error: {error_detail}"}), 422
+        
         response.raise_for_status()
         result = response.json()
         
@@ -109,6 +137,7 @@ def generate():
             })
         
     except Exception as e:
+        print("Error in generate:", str(e))  # Add error logging
         return jsonify({"success": False, "error": str(e)}), 500
         
     finally:
