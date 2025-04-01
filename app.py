@@ -95,10 +95,6 @@ def generate():
     if "lora" in data:
         model_params["lora"] = data["lora"]
     
-    # Process image if provided
-    image_data = model_params.get("image")
-    temp_file = None
-    
     try:
         # Handle model selection
         model_version_name = model_params.pop("model_version", None)
@@ -157,8 +153,13 @@ def generate():
                     print(f"Error reading image file {image_data}: {str(e)}")
                     return jsonify({"success": False, "error": f"Could not read image file: {str(e)}"}), 400
         
+        # Create a copy of parameters for logging without the image data
+        log_params = model_params.copy()
+        if "image" in log_params:
+            log_params["image"] = "[IMAGE_DATA]"
+        
         # Print the parameters being sent (for debugging)
-        print("Sending parameters to Replicate:", model_params)
+        print("Sending parameters to Replicate:", log_params)
         print("Using model version:", model_version)
         
         # Call Replicate API directly

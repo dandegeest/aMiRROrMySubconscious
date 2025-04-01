@@ -305,9 +305,12 @@ void captureAndProcess() {
   requestInProgress = true;
   requestStartTime = millis();
   
-  // Save the current camera frame
+  // Generate timestamp once to use for both files
   String timestamp = getCurrentTimestamp();
   String captureFilename = captureDir + "/capture_" + timestamp + ".jpg";
+  String outputFilename = outputDir + "/fofr_" + timestamp + ".png";
+  
+  // Save the current camera frame
   currentCamImage.save(dataPath(captureFilename));
   
   // Create the JSON payload for the request
@@ -341,14 +344,14 @@ void captureAndProcess() {
   // Send to the Flask server in a separate thread to avoid blocking
   Thread t = new Thread(new Runnable() {
     public void run() {
-      sendToFlaskServer(json.toString());
+      sendToFlaskServer(json.toString(), outputFilename);
     }
   });
   t.setDaemon(true); // Make thread a daemon so it won't prevent app from exiting
   t.start();
 }
 
-void sendToFlaskServer(String jsonPayload) {
+void sendToFlaskServer(String jsonPayload, String outputFilename) {
   try {
     // Parse the JSON to get just the prompt and prompt strength for logging
     JSONObject json = parseJSONObject(jsonPayload);
@@ -356,8 +359,17 @@ void sendToFlaskServer(String jsonPayload) {
     float pStrength = json.getFloat("prompt_strength");
     String model = json.getString("model_version");
     
-    // Print just the prompt and prompt strength
-    println("Sending request: model=\"" + model + "\", prompt=\"" + prompt + "\", prompt_strength=" + nf(pStrength, 0, 2));
+    // Create a copy of the JSON for logging without the image data
+    JSONObject logJson = new JSONObject();
+    logJson.setString("model_version", model);
+    logJson.setString("prompt", prompt);
+    logJson.setFloat("prompt_strength", pStrength);
+    logJson.setBoolean("go_fast", json.getBoolean("go_fast"));
+    logJson.setFloat("lora_scale", json.getFloat("lora_scale"));
+    logJson.setInt("num_inference_steps", json.getInt("num_inference_steps"));
+    
+    // Print just the relevant parameters
+    println("Sending request: " + logJson.toString());
     
     // Build the request
     HttpRequest request = HttpRequest.newBuilder()
@@ -377,8 +389,7 @@ void sendToFlaskServer(String jsonPayload) {
       if (jsonResponse != null && jsonResponse.getBoolean("success")) {
         String outputUrl = jsonResponse.getString("output_url");
         
-        // Download the image
-        String outputFilename = outputDir + "/fofr_" + getCurrentTimestamp() + ".png";
+        // Download the image using the passed filename
         downloadImage(outputUrl, outputFilename);
         lastCaptureTime = millis(); // Make sure the image displays for 5 seconds if request took longer
       } else {
