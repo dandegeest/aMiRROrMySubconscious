@@ -65,16 +65,26 @@ boolean showSettings = false;
 
 // List of prompts to cycle through
 String[] prompts = {
-  "shattered dream in motion",
-  "face made of fog",
-  "emotions blooming like flowers",
-  "ghost of forgotten thoughts",
-  "inner self made visible",
-  "memory dissolved in color",
-  "eyes like distant galaxies",
-  "the soul as static",
-  "subconscious masked in gold",
-  "echo of a feeling"
+  "the mirror remembers dreams you've forgotten",
+  "reflections shaped by inner fears and hopes",
+  "seeing the self through fractured memories",
+  "a reflection painted by emotion, not light",
+  "your shadow self emerging from the glass",
+  "subconscious thoughts made visible in color",
+  "the dreamer becomes the dream in reflection",
+  "what the mirror sees when you're not looking",
+  "echoes of past lives beneath the skin",
+  "your hidden feelings wearing your face",
+  "internal chaos spilling into external calm",
+  "the mind's eye disguised as your own",
+  "watching yourself dissolve into thought",
+  "emotion bleeding through a still face",
+  "the version of you no one else sees",
+  "a reflection stitched from memories and myth",
+  "eyes holding galaxies of forgotten dreams",
+  "when the mirror dreams of being you",
+  "a portrait shaped by intuition and longing",
+  "you, reflected through the mind's storm"
 };
 int currentPromptIndex = 0;
 
@@ -84,6 +94,9 @@ boolean showStatusDisplay = true;
 // Add these variables at the beginning near other image variables
 PImage blendedBuffer = null;
 PImage processedImageBuffer = null;
+
+// Add this with other boolean state variables
+boolean randomPrompt = false;
 
 void setup() {
   // Set up the display in landscape mode
@@ -317,8 +330,8 @@ void captureAndProcess() {
   JSONObject json = new JSONObject();
   json.setString("model_version", modelVersion);  // Send the current model version
   
-  // Set the prompt with MY_SUBCONSCIOUS trigger if enabled
-  String promptToUse = currentPrompt;
+  // Set the prompt based on random toggle
+  String promptToUse = randomPrompt ? prompts[int(random(prompts.length))] : currentPrompt;
   json.setString("prompt", promptToUse);
   
   // Format the prompt strength to 2 decimal places
@@ -508,29 +521,30 @@ void displayStatus() {
     // Main settings
     text("Prompt: " + currentPrompt, 20, 70);
     text("Model: " + modelVersion + " (M to cycle)", 20, 90);
+    text("Random Prompt: " + (randomPrompt ? "ON" : "OFF") + " (R to toggle)", 20, 110);
     
     // Camera settings
-    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 110);
+    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 130);
     
     // Generation settings
-    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 130);
-    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 150);
-    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 170);
-    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 190);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 210);
-    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 230);
+    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 150);
+    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 170);
+    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 190);
+    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 210);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 230);
+    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 250);
     
     // Advanced settings
-    text("Megapixels: " + megapixels, 20, 250);
-    text("Quality: " + outputQuality, 20, 270);
+    text("Megapixels: " + megapixels, 20, 270);
+    text("Quality: " + outputQuality, 20, 290);
     
     // Status
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 290);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 310);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 290);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 310);
     }
-    text("Press TAB to hide settings", 20, 310);
+    text("Press TAB to hide settings", 20, 330);
     
     // Show camera preview at 1/8 scale
     if (currentCamImage != null) {
@@ -541,15 +555,15 @@ void displayStatus() {
       // Draw border around preview
       stroke(255);
       noFill();
-      rect(20, 330, previewWidth, previewHeight);
+      rect(20, 350, previewWidth, previewHeight);
       
       // Draw the camera preview
       noStroke();
-      image(currentCamImage, 20, 330, previewWidth, previewHeight);
+      image(currentCamImage, 20, 350, previewWidth, previewHeight);
     }
   } else {
     // Show minimal info in the upper left
-    rect(10, 10, 300, 130);
+    rect(10, 10, 300, 150);
     
     fill(255);
     textSize(14);
@@ -559,11 +573,12 @@ void displayStatus() {
     text("Prompt: " + currentPrompt, 20, 50);
     text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
     text("Model: " + modelVersion, 20, 90);
+    text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 110);
     
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 110);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 130);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 110);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 130);
     }
   }
 }
@@ -596,6 +611,9 @@ void keyPressed() {
       modelVersion = availableModels[currentModelIndex];
       println("Switched to model:", modelVersion);
     }
+  } else if (key == 'r' || key == 'R') {
+    // Toggle random prompt mode
+    randomPrompt = !randomPrompt;
   } else if (key >= '1' && key <= '9') {
     // Set prompt strength based on number key (1-9 maps to 0.1-0.9)
     promptStrength = (key - '0') / 10.0;
