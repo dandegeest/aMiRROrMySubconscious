@@ -105,7 +105,15 @@ enum CaptureMode {
 }
 
 // Add this with other state variables
-CaptureMode currentCaptureMode = CaptureMode.CaptureTimer;
+CaptureMode currentCaptureMode = CaptureMode.CaptureMotion;
+
+// Add these with other state variables
+float motionThreshold = 0.02;  // Default threshold for motion detection (0-1)
+PImage previousFrame = null;  // Store the previous frame for motion detection
+boolean motionDetected = false;  // Flag to prevent multiple captures from same motion event
+
+// Add this with other state variables
+float currentMotion = 0;  // Store the current motion value
 
 void setup() {
   // Set up the display in landscape mode
@@ -178,6 +186,15 @@ void draw() {
     image(displayImage, 0, 0, width, height);
   }
   
+  // Draw capture indicator if generation is in progress
+  if (requestInProgress) {
+    pushStyle();
+    noStroke();
+    fill(255, 0, 0);  // Red color
+    circle(width - 30, 30, 20);  // Draw circle in upper right corner
+    popStyle();
+  }
+  
   // Display status information
   displayStatus();
 }
@@ -196,7 +213,58 @@ void drawCaptureTimer() {
 }
 
 void drawCaptureMotion() {
-  // TODO: Implement motion-based capture logic
+  if (currentCamImage == null) {
+    previousFrame = null;
+    currentMotion = 0;
+    return;
+  }
+  
+  // Initialize previous frame if needed
+  if (previousFrame == null) {
+    previousFrame = createImage(currentCamImage.width, currentCamImage.height, RGB);
+    previousFrame.copy(currentCamImage, 0, 0, currentCamImage.width, currentCamImage.height, 0, 0, currentCamImage.width, currentCamImage.height);
+    currentMotion = 0;
+    return;
+  }
+  
+  // Calculate motion between frames
+  currentMotion = calculateMotion(previousFrame, currentCamImage);
+  
+  // Check if motion exceeds threshold and we're not already processing
+  if (currentMotion > motionThreshold && !requestInProgress && !motionDetected) {
+    println("Motion detected: " + nf(currentMotion, 0, 3));
+    captureAndProcess();
+    motionDetected = true;
+  } else if (currentMotion <= motionThreshold && !requestInProgress) {
+    motionDetected = false;
+  }
+  
+  // Update previous frame
+  previousFrame.copy(currentCamImage, 0, 0, currentCamImage.width, currentCamImage.height, 0, 0, currentCamImage.width, currentCamImage.height);
+}
+
+float calculateMotion(PImage prev, PImage curr) {
+  float totalDiff = 0;
+  int pixelCount = 0;
+  
+  prev.loadPixels();
+  curr.loadPixels();
+  
+  // Compare each pixel between frames
+  for (int i = 0; i < prev.pixels.length; i++) {
+    color prevColor = prev.pixels[i];
+    color currColor = curr.pixels[i];
+    
+    // Calculate difference in brightness
+    float prevBrightness = brightness(prevColor);
+    float currBrightness = brightness(currColor);
+    
+    totalDiff += abs(prevBrightness - currBrightness);
+    pixelCount++;
+  }
+  
+  // Return average difference normalized to 0-1 range
+  return totalDiff / (pixelCount * 255);
 }
 
 void initializeCamera() {
@@ -536,7 +604,7 @@ void displayStatus() {
   
   if (showSettings) {
     // Show expanded settings panel in the upper left
-    rect(10, 10, 300, 500); // Increased height to fit all settings and camera preview
+    rect(10, 10, 300, 600); // Increased height from 500 to 600 to fit video preview
     
     fill(255);
     textSize(16);
@@ -564,13 +632,26 @@ void displayStatus() {
     text("Megapixels: " + megapixels, 20, 290);
     text("Quality: " + outputQuality, 20, 310);
     
-    // Status
-    if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 330);
+    // Status and motion settings
+    if (currentCaptureMode == CaptureMode.CaptureMotion) {
+      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 330);
+      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 350);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
+      if (requestInProgress) {
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
+      } else {
+        text("MOTION", 20, 390);
+      }
+      text("Press TAB to hide settings", 20, 410);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 330);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 330);
+      if (requestInProgress) {
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 350);
+      } else {
+        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 350);
+      }
+      text("Press TAB to hide settings", 20, 370);
     }
-    text("Press TAB to hide settings", 20, 350);
     
     // Show camera preview at 1/8 scale
     if (currentCamImage != null) {
@@ -578,18 +659,22 @@ void displayStatus() {
       int previewWidth = currentCamImage.width / 8;
       int previewHeight = currentCamImage.height / 8;
       
+      // Calculate center position for preview
+      int previewX = (300 - previewWidth) / 2 + 10;  // Center horizontally in the 300px wide panel
+      int previewY = 430;  // Position below the status text
+      
       // Draw border around preview
       stroke(255);
       noFill();
-      rect(20, 370, previewWidth, previewHeight);
+      rect(previewX, previewY, previewWidth, previewHeight);
       
       // Draw the camera preview
       noStroke();
-      image(currentCamImage, 20, 370, previewWidth, previewHeight);
+      image(currentCamImage, previewX, previewY, previewWidth, previewHeight);
     }
   } else {
     // Show minimal info in the upper left
-    rect(10, 10, 300, 150);
+    rect(10, 10, 300, 300);  // Increased height from 200 to 250 to fit video preview
     
     fill(255);
     textSize(14);
@@ -602,10 +687,30 @@ void displayStatus() {
     text("Mode: " + currentCaptureMode, 20, 110);
     text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 130);
     
+    // Add motion threshold to minimal display when in motion mode
+    if (currentCaptureMode == CaptureMode.CaptureMotion) {
+      text("Motion: " + nf(motionThreshold, 0, 2), 20, 150);
+    }
+    
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 150);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 170);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 150);
+      text(currentCaptureMode == CaptureMode.CaptureMotion ? "MOTION" : "Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 170);
+    }
+    
+    // Show camera preview at 1/8 scale in minimal mode
+    if (currentCamImage != null) {
+      // Calculate preview dimensions (1/8 of actual size)
+      int previewWidth = currentCamImage.width / 8;
+      int previewHeight = currentCamImage.height / 8;
+      
+      // Calculate center position for preview
+      int previewX = (300 - previewWidth) / 2 + 10;  // Center horizontally in the 300px wide panel
+      int previewY = 180;  // Position below the status text
+      
+      // Draw the camera preview
+      noStroke();
+      image(currentCamImage, previewX, previewY, previewWidth, previewHeight);
     }
   }
 }
@@ -655,9 +760,20 @@ void keyPressed() {
     promptStrength = constrain(promptStrength + 0.01, 0, 1);
   } else if (key == '-' || key == '_') {
     promptStrength = constrain(promptStrength - 0.01, 0, 1);
-  } else if (key == 'r' || key == 'R') {
-    // Reset to server defaults
-    fetchAndApplyDefaults();
+  } else if (key == 't' || key == 'T') {
+    // Toggle between timer and motion modes
+    currentCaptureMode = currentCaptureMode == CaptureMode.CaptureTimer ? 
+                        CaptureMode.CaptureMotion : 
+                        CaptureMode.CaptureTimer;
+    println("Switched to capture mode:", currentCaptureMode);
+  } else if (key == '[' || key == '{') {
+    // Decrease motion threshold
+    motionThreshold = constrain(motionThreshold - 0.01, 0, 1);
+    println("Motion threshold: " + nf(motionThreshold, 0, 3));
+  } else if (key == ']' || key == '}') {
+    // Increase motion threshold
+    motionThreshold = constrain(motionThreshold + 0.01, 0, 1);
+    println("Motion threshold: " + nf(motionThreshold, 0, 3));
   }
   
   // Check for letter + arrow key combinations first
