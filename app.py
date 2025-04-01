@@ -20,10 +20,11 @@ if not REPLICATE_API_TOKEN:
 # Global default parameters
 DEFAULT_PARAMS = {
     "model": "schnell",  # Default model
-    "width": 720,
-    "height": 1280,
-    "prompt": "MY_SUBCONSCIOUS",
-    "go_fast": False,
+    "model_version": "mysubconscious",  # Default model version
+    "width": 1280,
+    "height": 720,
+    "prompt": "a mirror or",
+    "go_fast": True,
     "lora_scale": 1,
     "megapixels": "1",
     "num_outputs": 1,
@@ -31,7 +32,7 @@ DEFAULT_PARAMS = {
     "output_format": "png",
     "guidance_scale": 3,
     "output_quality": 80,
-    "prompt_strength": 0.8,
+    "prompt_strength": 0.7,
     "extra_lora_scale": 1,
     "num_inference_steps": 4
 }

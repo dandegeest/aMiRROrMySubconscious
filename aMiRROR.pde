@@ -48,19 +48,19 @@ String[] availableModels;
 int currentModelIndex = 0;
 
 // Replicate model parameters
-String currentPrompt = "A reflection of a person in a mirror";
+String currentPrompt = "a mirror or";  // Match server default
 String modelVersion = "mysubconscious";  // Default model version
-boolean goFast = false;
-float loraScale = 1.0;
-String megapixels = "1";
-int numOutputs = 1;
-String aspectRatio = "custom";
-String outputFormat = "png";
-float guidanceScale = 3;
-int outputQuality = 80;
-float promptStrength = 0.6;
-float extraLoraScale = 1.0;
-int numInferenceSteps = 4;
+boolean goFast = true;  // Match server default
+float loraScale = 1.0;  // Match server default
+String megapixels = "1";  // Match server default
+int numOutputs = 1;  // Match server default
+String aspectRatio = "custom";  // Match server default
+String outputFormat = "png";  // Match server default
+float guidanceScale = 3;  // Match server default
+int outputQuality = 80;  // Match server default
+float promptStrength = 0.7;  // Match server default
+float extraLoraScale = 1.0;  // Match server default
+int numInferenceSteps = 4;  // Match server default
 boolean showSettings = false;
 
 // List of prompts to cycle through
@@ -108,6 +108,9 @@ void setup() {
   // Fetch available models
   fetchAvailableModels();
   
+  // Fetch and apply server defaults
+  fetchAndApplyDefaults();
+  
   // Create a blank display image
   displayImage = createImage(displayWidth, displayHeight, RGB);
   displayImage.loadPixels();
@@ -150,7 +153,9 @@ void draw() {
   }
   else noTint();
   
-  image(displayImage, 0, 0, width, height);
+  if (displayImage != null) {
+    image(displayImage, 0, 0, width, height);
+  }
   
   // Display status information
   displayStatus();
@@ -252,7 +257,7 @@ void updateDisplay() {
       
       // If transitioning, update alpha
       if (isTransitioning) {
-        transitionAlpha += 0.02; // Speed of transition
+        transitionAlpha += 0.067; // Speed of transition (1/15 for 0.5s at 30fps)
         if (transitionAlpha >= 1) {
           transitionAlpha = 1;
           isTransitioning = false;
@@ -307,7 +312,7 @@ void captureAndProcess() {
   
   // Create the JSON payload for the request
   JSONObject json = new JSONObject();
-  json.setString("model_version", modelVersion);
+  json.setString("model_version", modelVersion);  // Send the current model version
   
   // Set the prompt with MY_SUBCONSCIOUS trigger if enabled
   String promptToUse = currentPrompt;
@@ -633,7 +638,7 @@ void fetchAndApplyDefaults() {
       JSONObject json = parseJSONObject(response.body());
       
       // Update all model parameters from defaults
-      modelVersion = json.getString("model", modelVersion);
+      modelVersion = json.getString("model_version", modelVersion);  // Get model version from server
       goFast = json.getBoolean("go_fast", goFast);
       loraScale = json.getFloat("lora_scale", loraScale);
       megapixels = json.getString("megapixels", megapixels);
@@ -710,4 +715,4 @@ void fetchAvailableModels() {
     // Fallback to default model if server request fails
     availableModels = new String[]{"mysubconscious"};
   }
-} 
+}
