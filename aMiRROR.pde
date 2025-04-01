@@ -98,6 +98,15 @@ PImage processedImageBuffer = null;
 // Add this with other boolean state variables
 boolean randomPrompt = false;
 
+// Add this near the top with other state variables
+enum CaptureMode {
+  CaptureTimer,
+  CaptureMotion
+}
+
+// Add this with other state variables
+CaptureMode currentCaptureMode = CaptureMode.CaptureTimer;
+
 void setup() {
   // Set up the display in landscape mode
   size(1280, 720);
@@ -147,15 +156,14 @@ void draw() {
     // Display camera image or AI image with transition
     updateDisplay();
     
-    // Check if it's time for a new capture
-    if (!requestInProgress && millis() - lastCaptureTime > captureInterval) {
-      captureAndProcess();
-    }
-    
-    // Check for timeout on requests
-    if (requestInProgress && millis() - requestStartTime > requestTimeout) {
-      println("Request timed out, resetting");
-      requestInProgress = false;
+    // Handle different capture modes
+    switch (currentCaptureMode) {
+      case CaptureTimer:
+        drawCaptureTimer();
+        break;
+      case CaptureMotion:
+        drawCaptureMotion();
+        break;
     }
   }
   
@@ -172,6 +180,23 @@ void draw() {
   
   // Display status information
   displayStatus();
+}
+
+void drawCaptureTimer() {
+  // Check if it's time for a new capture
+  if (!requestInProgress && millis() - lastCaptureTime > captureInterval) {
+    captureAndProcess();
+  }
+  
+  // Check for timeout on requests
+  if (requestInProgress && millis() - requestStartTime > requestTimeout) {
+    println("Request timed out, resetting");
+    requestInProgress = false;
+  }
+}
+
+void drawCaptureMotion() {
+  // TODO: Implement motion-based capture logic
 }
 
 void initializeCamera() {
@@ -522,29 +547,30 @@ void displayStatus() {
     text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 70);
     text("Model: " + modelVersion + " (M to cycle)", 20, 90);
     text("Random Prompt: " + (randomPrompt ? "ON" : "OFF") + " (R to toggle)", 20, 110);
+    text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 130);
     
     // Camera settings
-    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 130);
+    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 150);
     
     // Generation settings
-    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 150);
-    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 170);
-    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 190);
-    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 210);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 230);
-    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 250);
+    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 170);
+    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 190);
+    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 210);
+    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 230);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 250);
+    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 270);
     
     // Advanced settings
-    text("Megapixels: " + megapixels, 20, 270);
-    text("Quality: " + outputQuality, 20, 290);
+    text("Megapixels: " + megapixels, 20, 290);
+    text("Quality: " + outputQuality, 20, 310);
     
     // Status
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 310);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 330);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 310);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 330);
     }
-    text("Press TAB to hide settings", 20, 330);
+    text("Press TAB to hide settings", 20, 350);
     
     // Show camera preview at 1/8 scale
     if (currentCamImage != null) {
@@ -555,11 +581,11 @@ void displayStatus() {
       // Draw border around preview
       stroke(255);
       noFill();
-      rect(20, 350, previewWidth, previewHeight);
+      rect(20, 370, previewWidth, previewHeight);
       
       // Draw the camera preview
       noStroke();
-      image(currentCamImage, 20, 350, previewWidth, previewHeight);
+      image(currentCamImage, 20, 370, previewWidth, previewHeight);
     }
   } else {
     // Show minimal info in the upper left
@@ -573,12 +599,13 @@ void displayStatus() {
     text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 50);
     text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
     text("Model: " + modelVersion, 20, 90);
-    text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 110);
+    text("Mode: " + currentCaptureMode, 20, 110);
+    text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 130);
     
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 130);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 150);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 130);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 150);
     }
   }
 }
@@ -614,6 +641,12 @@ void keyPressed() {
   } else if (key == 'r' || key == 'R') {
     // Toggle random prompt mode
     randomPrompt = !randomPrompt;
+  } else if (key == 'c' || key == 'C') {
+    // Cycle through capture modes
+    currentCaptureMode = currentCaptureMode == CaptureMode.CaptureTimer ? 
+                        CaptureMode.CaptureMotion : 
+                        CaptureMode.CaptureTimer;
+    println("Switched to capture mode:", currentCaptureMode);
   } else if (key >= '1' && key <= '9') {
     // Set prompt strength based on number key (1-9 maps to 0.1-0.9)
     promptStrength = (key - '0') / 10.0;
