@@ -6,6 +6,15 @@ from dotenv import load_dotenv
 import base64
 import tempfile
 import json
+from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,12 +24,26 @@ app = Flask(__name__)
 # Get Replicate API token from environment
 REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN")
 if not REPLICATE_API_TOKEN:
-    print("Warning: REPLICATE_API_TOKEN not set in environment")
+    logger.warning("REPLICATE_API_TOKEN not set in environment")
+
+# Create a session with connection pooling
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+)
+adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
+session.mount("https://", adapter)
+session.mount("http://", adapter)
+
+# Create a thread pool for image processing
+executor = ThreadPoolExecutor(max_workers=4)
 
 # Global default parameters
 DEFAULT_PARAMS = {
-    "model": "schnell",  # Default model
-    "model_version": "mysubconscious",  # Default model version
+    "model": "schnell",
+    "model_version": "mysubconscious",
     "width": 1280,
     "height": 720,
     "prompt": "a mirror or",
@@ -37,7 +60,7 @@ DEFAULT_PARAMS = {
     "num_inference_steps": 4
 }
 
-# Map friendly names to model version IDs and trigger words
+# Cache model version information
 MODEL_VERSIONS = {
     "mysubconscious": {
         "version_id": "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9",
@@ -70,146 +93,128 @@ MODEL_VERSIONS = {
 }
 
 # Valid model values for direct use
-VALID_MODELS = ["schnell", "dev"]
+VALID_MODELS = {"schnell", "dev"}
+
+@lru_cache(maxsize=128)
+def get_model_version(model_name):
+    """Cache model version lookups"""
+    return MODEL_VERSIONS.get(model_name)
+
+def process_image(image_data):
+    """Process image data in a separate thread"""
+    try:
+        if image_data.startswith("http"):
+            response = session.get(image_data)
+            response.raise_for_status()
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            temp_file.write(response.content)
+            temp_file.close()
+            with open(temp_file.name, "rb") as img_file:
+                encoded_image = base64.b64encode(img_file.read()).decode('utf-8')
+                return f"data:image/png;base64,{encoded_image}", temp_file.name
+        elif image_data.startswith("data:image"):
+            if "data:image/jpeg;base64," in image_data:
+                return image_data.replace("data:image/jpeg;base64,", "data:image/png;base64,"), None
+            return image_data, None
+        else:
+            with open(image_data, "rb") as img_file:
+                encoded_image = base64.b64encode(img_file.read()).decode('utf-8')
+                return f"data:image/png;base64,{encoded_image}", None
+    except Exception as e:
+        logger.error(f"Error processing image: {str(e)}")
+        raise
 
 @app.route("/generate", methods=["POST"])
 def generate():
-    # Get request data
-    data = request.get_json() or {}
-    
-    # Create a clean copy of defaults
-    model_params = DEFAULT_PARAMS.copy()
-    
-    # Map Processing parameter names to server parameter names
-    param_mapping = {
-        "input_image": "image"
-    }
-    
-    # Update parameters from request data, handling mapped names
-    for key, value in data.items():
-        target_key = param_mapping.get(key, key)
-        if target_key in model_params or target_key == "image" or target_key == "model_version":
-            model_params[target_key] = value
-    
-    # Add any additional parameters that aren't in defaults but are needed
-    if "lora" in data:
-        model_params["lora"] = data["lora"]
-    
     try:
+        data = request.get_json() or {}
+        model_params = DEFAULT_PARAMS.copy()
+        
+        # Update parameters efficiently
+        for key, value in data.items():
+            if key in model_params or key in ("image", "model_version", "lora"):
+                model_params[key] = value
+        
         # Handle model selection
         model_version_name = model_params.pop("model_version", None)
         model_name = model_params.get("model", "schnell")
-
-        # If model_version is provided, use its version ID and set model to "schnell"
+        
         if model_version_name:
-            model_info = MODEL_VERSIONS.get(model_version_name)
+            model_info = get_model_version(model_version_name)
             if not model_info:
                 return jsonify({"success": False, "error": f"Unknown model version: {model_version_name}"}), 400
             model_version = model_info["version_id"]
             model_params["model"] = "schnell"
             
-            # Add the trigger word to the prompt if it exists
+            # Add trigger word if needed
             trigger = model_info.get("trigger")
             if trigger:
                 prompt = model_params.get("prompt", "")
                 if not prompt.startswith(trigger):
                     model_params["prompt"] = f"{trigger} {prompt}".strip()
         else:
-            # No model_version provided, check if model is valid
             if model_name not in VALID_MODELS:
-                return jsonify({"success": False, "error": f"Invalid model: {model_name}. Must be one of: {', '.join(VALID_MODELS)}"}), 400
-            # Use the default version ID for the selected model
+                return jsonify({"success": False, "error": f"Invalid model: {model_name}"}), 400
             model_version = "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9"
-
-        # Process image if provided
+        
+        # Process image asynchronously if provided
         image_data = model_params.get("image")
         temp_file = None
-        
         if image_data:
-            if image_data.startswith("http"):
-                # Download image from URL
-                response = requests.get(image_data)
-                response.raise_for_status()
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-                temp_file.write(response.content)
-                temp_file.close()
-                # Base64 encode the image for the API
-                with open(temp_file.name, "rb") as img_file:
-                    encoded_image = base64.b64encode(img_file.read()).decode('utf-8')
-                    model_params["image"] = f"data:image/png;base64,{encoded_image}"
-                
-            elif image_data.startswith("data:image"):
-                # Already base64 encoded - ensure it's marked as PNG
-                if "data:image/jpeg;base64," in image_data:
-                    model_params["image"] = image_data.replace("data:image/jpeg;base64,", "data:image/png;base64,")
-                
-            else:
-                # Treat as local file path, encode to base64
-                try:
-                    with open(image_data, "rb") as img_file:
-                        encoded_image = base64.b64encode(img_file.read()).decode('utf-8')
-                        model_params["image"] = f"data:image/png;base64,{encoded_image}"
-                except Exception as e:
-                    print(f"Error reading image file {image_data}: {str(e)}")
-                    return jsonify({"success": False, "error": f"Could not read image file: {str(e)}"}), 400
+            future = executor.submit(process_image, image_data)
+            try:
+                processed_image, temp_file = future.result(timeout=10)
+                model_params["image"] = processed_image
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Image processing error: {str(e)}"}), 400
         
-        # Create a copy of parameters for logging without the image data
-        log_params = model_params.copy()
-        if "image" in log_params:
-            log_params["image"] = "[IMAGE_DATA]"
+        # Create sanitized parameters for logging
+        log_params = {k: v for k, v in model_params.items() if k != "image"}
+        logger.info(f"Sending parameters to Replicate: {log_params}")
+        logger.info(f"Using model version: {model_version}")
         
-        # Print the parameters being sent (for debugging)
-        print("Sending parameters to Replicate:", log_params)
-        print("Using model version:", model_version)
-        
-        # Call Replicate API directly
+        # Call Replicate API
         headers = {
             "Authorization": f"Bearer {REPLICATE_API_TOKEN}",
             "Content-Type": "application/json",
             "Prefer": "wait"
         }
         
-        payload = {
-            "version": model_version,
-            "input": model_params
-        }
-        
-        response = requests.post(
+        response = session.post(
             "https://api.replicate.com/v1/predictions",
             headers=headers,
-            json=payload
+            json={"version": model_version, "input": model_params}
         )
         
         if response.status_code == 422:
             error_detail = response.json().get("detail", "Unknown error")
-            print("Replicate API validation error:", error_detail)
+            logger.error(f"Replicate API validation error: {error_detail}")
             return jsonify({"success": False, "error": f"API validation error: {error_detail}"}), 422
         
         response.raise_for_status()
         result = response.json()
         
-        # Return the output URLs
+        # Return appropriate response
         if result.get("output") and isinstance(result["output"], list):
             return jsonify({"success": True, "output_url": result["output"][0]})
         elif result.get("status") == "succeeded":
             return jsonify({"success": True, "output_url": result.get("output")})
         else:
-            # For asynchronous responses, return the prediction ID
             return jsonify({
-                "success": True, 
+                "success": True,
                 "prediction_id": result.get("id"),
                 "status": result.get("status")
             })
             
     except Exception as e:
-        print("Error in generate:", str(e))  # Add error logging
+        logger.error(f"Error in generate: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
         
     finally:
         # Clean up temp file if created
         if temp_file:
             try:
-                os.unlink(temp_file.name)
+                os.unlink(temp_file)
             except:
                 pass
 
@@ -221,22 +226,15 @@ def config():
         try:
             new_params = request.get_json()
             # Update only existing parameters
-            for key in DEFAULT_PARAMS:
-                if key in new_params:
-                    DEFAULT_PARAMS[key] = new_params[key]
+            DEFAULT_PARAMS.update({k: v for k, v in new_params.items() if k in DEFAULT_PARAMS})
             return jsonify({"success": True, "params": DEFAULT_PARAMS})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 400
     
-    # GET request - render the configuration page
-    return render_template(
-        'config.html', 
-        params=DEFAULT_PARAMS
-    )
+    return render_template('config.html', params=DEFAULT_PARAMS)
 
 @app.route("/config/defaults", methods=["GET"])
 def get_defaults():
-    """Get the current default parameters in JSON format"""
     return jsonify(DEFAULT_PARAMS)
 
 @app.route("/health", methods=["GET"])
@@ -245,7 +243,6 @@ def health_check():
 
 @app.route("/models", methods=["GET"])
 def get_models():
-    """Get the list of available models"""
     return jsonify(list(MODEL_VERSIONS.keys()))
 
 if __name__ == "__main__":

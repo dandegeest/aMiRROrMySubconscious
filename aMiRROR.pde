@@ -519,7 +519,7 @@ void displayStatus() {
     textSize(14);
     
     // Main settings
-    text("Prompt: " + currentPrompt, 20, 70);
+    text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 70);
     text("Model: " + modelVersion + " (M to cycle)", 20, 90);
     text("Random Prompt: " + (randomPrompt ? "ON" : "OFF") + " (R to toggle)", 20, 110);
     
@@ -570,7 +570,7 @@ void displayStatus() {
     text("aMiRROR - AI Subconscious Mirror", 20, 30);
     
     // Show prompt and prompt strength
-    text("Prompt: " + currentPrompt, 20, 50);
+    text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 50);
     text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
     text("Model: " + modelVersion, 20, 90);
     text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 110);
