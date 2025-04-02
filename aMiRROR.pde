@@ -88,6 +88,50 @@ String[] prompts = {
 };
 int currentPromptIndex = 0;
 
+// List of one-word prompts for auto-capture
+String[] autoCapturePrompts = {
+  "Reverie",
+  "Fracture",
+  "Mirage",
+  "Doppelgänger",
+  "Submerge",
+  "Lucidity",
+  "Ego",
+  "Ripple",
+  "Haunting",
+  "Awakening",
+  "Distortion",
+  "Echo",
+  "Glimpse",
+  "Specter",
+  "Drift",
+  "Introspection",
+  "Paradox",
+  "Flicker",
+  "Whisper",
+  "Phantom",
+  "Veil",
+  "Uncanny",
+  "Subconscious",
+  "Vessel",
+  "Rebirth",
+  "Threshold",
+  "Pulse",
+  "Obscura",
+  "Shadow",
+  "Inversion",
+  "Sentience",
+  "Descent",
+  "Mindscape",
+  "Otherness",
+  "Resonance",
+  "Refraction",
+  "Presence",
+  "Trace",
+  "Reflection",
+  "Transcendence"
+};
+
 // Add this variable with the other boolean state variables (around line 43-44)
 boolean showStatusDisplay = true;
 
@@ -97,6 +141,9 @@ PImage processedImageBuffer = null;
 
 // Add this with other boolean state variables
 boolean randomPrompt = false;
+
+// Flipping the captured image before generating can give interesting results
+boolean flipImage = false;
 
 // Add this near the top with other state variables
 enum CaptureMode {
@@ -114,6 +161,23 @@ boolean motionDetected = false;  // Flag to prevent multiple captures from same 
 
 // Add this with other state variables
 float currentMotion = 0;  // Store the current motion value
+
+// Add this function before setup()
+PImage flipImageVertically(PImage source) {
+  source.loadPixels();
+  PImage flipped = createImage(source.width, source.height, RGB);
+  flipped.loadPixels();
+  
+  for (int y = 0; y < source.height; y++) {
+    for (int x = 0; x < source.width; x++) {
+      int srcIndex = x + y * source.width;
+      int dstIndex = x + (source.height - 1 - y) * source.width;
+      flipped.pixels[dstIndex] = source.pixels[srcIndex];
+    }
+  }
+  flipped.updatePixels();
+  return flipped;
+}
 
 void setup() {
   // Set up the display in landscape mode
@@ -233,10 +297,19 @@ void drawCaptureMotion() {
   // Check if motion exceeds threshold and we're not already processing
   if (currentMotion > motionThreshold && !requestInProgress && !motionDetected) {
     println("Motion detected: " + nf(currentMotion, 0, 3));
-    captureAndProcess();
+    captureAndProcess(modelVersion, currentPrompt, promptStrength);
     motionDetected = true;
   } else if (currentMotion <= motionThreshold && !requestInProgress) {
     motionDetected = false;
+  }
+  
+  // Check for timeout (30 seconds) and auto-capture if needed
+  if (!requestInProgress && millis() - lastCaptureTime > 30000) {
+    println("No motion detected for 30 seconds, auto-capturing...");
+    // Select a random two-word prompt
+    String randomPrompt = autoCapturePrompts[int(random(autoCapturePrompts.length))];
+    println("Using auto-capture prompt: " + randomPrompt);
+    captureAndProcess("condensation", randomPrompt, 0.9);
   }
   
   // Update previous frame
@@ -404,6 +477,13 @@ void updateDisplay() {
 }
 
 void captureAndProcess() {
+  // Call the new version with current settings
+  captureAndProcess(modelVersion, currentPrompt, promptStrength);
+}
+
+void captureAndProcess(String modelVersion, String prompt, float promptStrength) {
+  if (currentCamImage == null) return;
+  
   // Request garbage collection before starting a new capture cycle
   System.gc();
   
@@ -416,19 +496,20 @@ void captureAndProcess() {
   String captureFilename = captureDir + "/capture_" + timestamp + ".jpg";
   String outputFilename = outputDir + "/fofr_" + timestamp + ".png";
   
-  // Save the current camera frame
-  currentCamImage.save(dataPath(captureFilename));
+  // Flip the image vertically before saving if enabled
+  PImage imageToSave = flipImage ? flipImageVertically(currentCamImage) : currentCamImage;
+  imageToSave.save(dataPath(captureFilename));
   
   // Create the JSON payload for the request
   JSONObject json = new JSONObject();
-  json.setString("model_version", modelVersion);  // Send the current model version
+  json.setString("model_version", modelVersion);
   
   // Set the prompt based on random toggle
-  String promptToUse = randomPrompt ? prompts[int(random(prompts.length))] : currentPrompt;
+  String promptToUse = randomPrompt ? prompts[int(random(prompts.length))] : prompt;
   json.setString("prompt", promptToUse);
   
-  // Format the prompt strength to 2 decimal places
-  float formattedPromptStrength = float(nf(promptStrength, 0, 2));
+  // Send prompt strength as a float
+  json.setFloat("prompt_strength", promptStrength);
   
   // Continue with the rest of the parameters
   json.setString("lora", "fofr_loras");
@@ -443,7 +524,6 @@ void captureAndProcess() {
   json.setString("output_format", outputFormat);
   json.setFloat("guidance_scale", guidanceScale);
   json.setInt("output_quality", outputQuality);
-  json.setFloat("prompt_strength", formattedPromptStrength);
   json.setFloat("extra_lora_scale", extraLoraScale);
   json.setInt("num_inference_steps", numInferenceSteps);
   
@@ -564,6 +644,9 @@ void downloadImage(String url, String outputFilename) {
         PImage newAIImage = loadImage(outputPath.toString());
         
         if (newAIImage != null) {
+          // Flip the image back to original orientation if enabled
+          PImage finalImage = flipImage ? flipImageVertically(newAIImage) : newAIImage;
+          
           // Only after successfully loading the new image, update references
           synchronized(this) {
             // Clear old reference first
@@ -571,7 +654,7 @@ void downloadImage(String url, String outputFilename) {
             System.gc(); // Request garbage collection
             
             // Now set the new image
-            currentAIImage = newAIImage;
+            currentAIImage = finalImage;
             isTransitioning = true;
             transitionAlpha = 0;
           }
@@ -616,41 +699,42 @@ void displayStatus() {
     text("Model: " + modelVersion + " (M to cycle)", 20, 90);
     text("Random Prompt: " + (randomPrompt ? "ON" : "OFF") + " (R to toggle)", 20, 110);
     text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 130);
+    text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 150);
     
     // Camera settings
-    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 150);
+    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 170);
     
     // Generation settings
-    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 170);
-    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 190);
-    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 210);
-    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (F to toggle)", 20, 230);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 250);
-    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 270);
+    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 190);
+    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 210);
+    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 230);
+    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 250);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 270);
+    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 290);
     
     // Advanced settings
-    text("Megapixels: " + megapixels, 20, 290);
-    text("Quality: " + outputQuality, 20, 310);
+    text("Megapixels: " + megapixels, 20, 310);
+    text("Quality: " + outputQuality, 20, 330);
     
     // Status and motion settings
     if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 330);
-      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 350);
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
+      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 350);
+      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 370);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 390);
       if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 410);
       } else {
-        text("MOTION", 20, 390);
+        text("MOTION", 20, 410);
       }
-      text("Press TAB to hide settings", 20, 410);
+      text("Press TAB to hide settings", 20, 430);
     } else {
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 330);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 350);
       if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 350);
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 370);
       } else {
-        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 350);
+        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 370);
       }
-      text("Press TAB to hide settings", 20, 370);
+      text("Press TAB to hide settings", 20, 390);
     }
     
     // Show camera preview at 1/8 scale
@@ -661,7 +745,7 @@ void displayStatus() {
       
       // Calculate center position for preview
       int previewX = (300 - previewWidth) / 2 + 10;  // Center horizontally in the 300px wide panel
-      int previewY = 430;  // Position below the status text
+      int previewY = 450;  // Position below the status text
       
       // Draw border around preview
       stroke(255);
@@ -686,16 +770,17 @@ void displayStatus() {
     text("Model: " + modelVersion, 20, 90);
     text("Mode: " + currentCaptureMode, 20, 110);
     text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 130);
+    text("Flip: " + (flipImage ? "ON" : "OFF"), 20, 150);
     
     // Add motion threshold to minimal display when in motion mode
     if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion: " + nf(motionThreshold, 0, 2), 20, 150);
+      text("Motion: " + nf(motionThreshold, 0, 2), 20, 170);
     }
     
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 170);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 190);
     } else {
-      text(currentCaptureMode == CaptureMode.CaptureMotion ? "MOTION" : "Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 170);
+      text(currentCaptureMode == CaptureMode.CaptureMotion ? "MOTION" : "Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 190);
     }
     
     // Show camera preview at 1/8 scale in minimal mode
@@ -706,7 +791,7 @@ void displayStatus() {
       
       // Calculate center position for preview
       int previewX = (300 - previewWidth) / 2 + 10;  // Center horizontally in the 300px wide panel
-      int previewY = 180;  // Position below the status text
+      int previewY = 200;  // Position below the status text
       
       // Draw the camera preview
       noStroke();
@@ -719,7 +804,7 @@ void displayStatus() {
 void keyPressed() {
   if (key == 's' || key == 'S') {
     // Force a new capture
-    captureAndProcess();
+    captureAndProcess(modelVersion, currentPrompt, promptStrength);
   } else if (key == 'p' || key == 'P') {
     // Cycle to next prompt
     currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
@@ -734,6 +819,10 @@ void keyPressed() {
     // Toggle status display visibility
     showStatusDisplay = !showStatusDisplay;
   } else if (key == 'f' || key == 'F') {
+    // Toggle image flipping
+    flipImage = !flipImage;
+    println("Image flipping: " + (flipImage ? "ON" : "OFF"));
+  } else if (key == 'g' || key == 'G') {
     // Toggle fast mode
     goFast = !goFast;
   } else if (key == 'm' || key == 'M') {

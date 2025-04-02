@@ -70,9 +70,13 @@ MODEL_VERSIONS = {
         "version_id": "4cff954216285e54af8831b40d19cadd696e849f3d6840de59a77add698775eb",
         "trigger": "KLINGON"
     },
-    "minecraft": {
-        "version_id": "23cd3151875f9caf78b022d9409425d04e3a5b0fa093d07590b37d3f98fef682",
-        "trigger": "MNCRFTMOV"
+    "neo-impressionism": {
+        "version_id": "7cbedb5821207721873a5dcf248a5d8fe232214e32e5b6b94c4206c218be631e",
+        "trigger": "neo-impressionism"
+    },
+    "condensation": {
+        "version_id": "7d174a0ee7e9769758117762f7069646b3478e09cca605c2c2284b349af84f2d",
+        "trigger": "CONDENSATION"
     },
     "weird": {
         "version_id": "a731522059fe08264e0403847198ed5fa29973e0a0a594b45d7e0244f943f3ee",
