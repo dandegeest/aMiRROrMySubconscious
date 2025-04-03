@@ -59,7 +59,6 @@ String outputFormat = "png";  // Match server default
 float guidanceScale = 3;  // Match server default
 int outputQuality = 80;  // Match server default
 float promptStrength = 0.7;  // Match server default
-float extraLoraScale = 1.0;  // Match server default
 int numInferenceSteps = 4;  // Match server default
 boolean showSettings = false;
 
@@ -177,6 +176,36 @@ PImage flipImageVertically(PImage source) {
   }
   flipped.updatePixels();
   return flipped;
+}
+
+// Add these helper functions before the main code
+void drawCameraPreview(int x, int y) {
+  if (currentCamImage != null) {
+    // Calculate preview dimensions (1/8 of actual size)
+    int previewWidth = currentCamImage.width / 8;
+    int previewHeight = currentCamImage.height / 8;
+    
+    // Draw the camera preview
+    image(currentCamImage, x, y, previewWidth, previewHeight);
+
+    // Draw border around preview
+    stroke(255, 0, 0);
+    noFill();
+    strokeWeight(2);
+    rect(x-1, y-1, previewWidth+2, previewHeight+2, 5);
+  }
+}
+
+void adjustMotionThreshold(float delta) {
+  motionThreshold = constrain(motionThreshold + delta, 0, 1);
+  println("Motion threshold: " + nf(motionThreshold, 0, 3));
+}
+
+void switchCaptureMode() {
+  currentCaptureMode = currentCaptureMode == CaptureMode.CaptureTimer ? 
+                      CaptureMode.CaptureMotion : 
+                      CaptureMode.CaptureTimer;
+  println("Switched to capture mode:", currentCaptureMode);
 }
 
 void setup() {
@@ -518,13 +547,13 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   json.setString("image", encodeImageToBase64(captureFilename));
   json.setBoolean("go_fast", goFast);
   json.setFloat("lora_scale", loraScale);
+  json.setFloat("extra_lora_scale", 1.0);  // Always set to 1
   json.setString("megapixels", megapixels);
   json.setInt("num_outputs", numOutputs);
   json.setString("aspect_ratio", aspectRatio);
   json.setString("output_format", outputFormat);
   json.setFloat("guidance_scale", guidanceScale);
   json.setInt("output_quality", outputQuality);
-  json.setFloat("extra_lora_scale", extraLoraScale);
   json.setInt("num_inference_steps", numInferenceSteps);
   
   // Send to the Flask server in a separate thread to avoid blocking
@@ -687,7 +716,7 @@ void displayStatus() {
   
   if (showSettings) {
     // Show expanded settings panel in the upper left
-    rect(10, 10, 300, 600); // Increased height from 500 to 600 to fit video preview
+    rect(10, 10, 300, 550);
     
     fill(255);
     textSize(16);
@@ -709,56 +738,40 @@ void displayStatus() {
     text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 210);
     text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 230);
     text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 250);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L+↑/↓ to change)", 20, 270);
-    text("Extra Lora Scale: " + nf(extraLoraScale, 0, 1) + " (E+↑/↓ to change)", 20, 290);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 270);
     
     // Advanced settings
-    text("Megapixels: " + megapixels, 20, 310);
-    text("Quality: " + outputQuality, 20, 330);
+    text("Megapixels: " + megapixels, 20, 290);
+    text("Quality: " + outputQuality, 20, 310);
     
     // Status and motion settings
     if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 350);
-      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 370);
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 390);
+      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 330);
+      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 350);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
       if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 410);
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
       } else {
-        text("MOTION", 20, 410);
+        text("MOTION", 20, 390);
       }
-      text("Press TAB to hide settings", 20, 430);
+      text("Press TAB to hide settings", 20, 410);
     } else {
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 350);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 330);
       if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 370);
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 350);
       } else {
-        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 370);
+        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 350);
       }
-      text("Press TAB to hide settings", 20, 390);
+      text("Press TAB to hide settings", 20, 370);
     }
     
     // Show camera preview at 1/8 scale
-    if (currentCamImage != null) {
-      // Calculate preview dimensions (1/8 of actual size)
-      int previewWidth = currentCamImage.width / 8;
-      int previewHeight = currentCamImage.height / 8;
-      
-      // Calculate center position for preview
-      int previewX = (300 - previewWidth) / 2 + 10;  // Center horizontally in the 300px wide panel
-      int previewY = 450;  // Position below the status text
-      
-      // Draw border around preview
-      stroke(255);
-      noFill();
-      rect(previewX, previewY, previewWidth, previewHeight);
-      
-      // Draw the camera preview
-      noStroke();
-      image(currentCamImage, previewX, previewY, previewWidth, previewHeight);
-    }
+    int previewX = (300 - currentCamImage.width/8) / 2 + 10;
+    int previewY = 430;
+    drawCameraPreview(previewX, previewY);
   } else {
     // Show minimal info in the upper left
-    rect(10, 10, 300, 300);  // Increased height from 200 to 250 to fit video preview
+    rect(10, 10, 300, 300);
     
     fill(255);
     textSize(14);
@@ -784,108 +797,130 @@ void displayStatus() {
     }
     
     // Show camera preview at 1/8 scale in minimal mode
-    if (currentCamImage != null) {
-      // Calculate preview dimensions (1/8 of actual size)
-      int previewWidth = currentCamImage.width / 8;
-      int previewHeight = currentCamImage.height / 8;
-      
-      // Calculate center position for preview
-      int previewX = (300 - previewWidth) / 2 + 10;  // Center horizontally in the 300px wide panel
-      int previewY = 200;  // Position below the status text
-      
-      // Draw the camera preview
-      noStroke();
-      image(currentCamImage, previewX, previewY, previewWidth, previewHeight);
-    }
+    int previewX = (300 - currentCamImage.width/8) / 2 + 10;
+    int previewY = 200;
+    drawCameraPreview(previewX, previewY);
   }
 }
 
-// Handle keypresses for changing prompts or other settings
 void keyPressed() {
-  if (key == 's' || key == 'S') {
-    // Force a new capture
-    captureAndProcess(modelVersion, currentPrompt, promptStrength);
-  } else if (key == 'p' || key == 'P') {
-    // Cycle to next prompt
-    currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
-    currentPrompt = prompts[currentPromptIndex];
-  } else if (key == ' ') {
-    // Toggle between camera and AI view
-    transitionAlpha = (transitionAlpha > 0.5) ? 0 : 1;
-  } else if (key == TAB) {
-    // Toggle settings display
-    showSettings = !showSettings;
-  } else if (key == 'd' || key == 'D') {
-    // Toggle status display visibility
-    showStatusDisplay = !showStatusDisplay;
-  } else if (key == 'f' || key == 'F') {
-    // Toggle image flipping
-    flipImage = !flipImage;
-    println("Image flipping: " + (flipImage ? "ON" : "OFF"));
-  } else if (key == 'g' || key == 'G') {
-    // Toggle fast mode
-    goFast = !goFast;
-  } else if (key == 'm' || key == 'M') {
-    // Cycle through available models
-    if (availableModels != null && availableModels.length > 0) {
-      currentModelIndex = (currentModelIndex + 1) % availableModels.length;
-      modelVersion = availableModels[currentModelIndex];
-      println("Switched to model:", modelVersion);
+  // Convert key to uppercase for simpler checks
+  char ciKeyPressed = Character.toUpperCase(key);
+  
+  // Handle special keys first
+  if (key == CODED) {
+    switch (keyCode) {
+      case UP:
+        numInferenceSteps = constrain(numInferenceSteps + 1, 1, 50);
+        break;
+      case DOWN:
+        numInferenceSteps = constrain(numInferenceSteps - 1, 1, 50);
+        break;
+      case LEFT:
+        guidanceScale = constrain(guidanceScale - 0.01, 0, 10);
+        break;
+      case RIGHT:
+        guidanceScale = constrain(guidanceScale + 0.01, 0, 10);
+        break;
     }
-  } else if (key == 'r' || key == 'R') {
-    // Toggle random prompt mode
-    randomPrompt = !randomPrompt;
-  } else if (key == 'c' || key == 'C') {
-    // Cycle through capture modes
-    currentCaptureMode = currentCaptureMode == CaptureMode.CaptureTimer ? 
-                        CaptureMode.CaptureMotion : 
-                        CaptureMode.CaptureTimer;
-    println("Switched to capture mode:", currentCaptureMode);
-  } else if (key >= '1' && key <= '9') {
-    // Set prompt strength based on number key (1-9 maps to 0.1-0.9)
-    promptStrength = (key - '0') / 10.0;
-    println("Set prompt strength to:", nf(promptStrength, 0, 1));
-  } else if (key == '+' || key == '=') {
-    promptStrength = constrain(promptStrength + 0.01, 0, 1);
-  } else if (key == '-' || key == '_') {
-    promptStrength = constrain(promptStrength - 0.01, 0, 1);
-  } else if (key == 't' || key == 'T') {
-    // Toggle between timer and motion modes
-    currentCaptureMode = currentCaptureMode == CaptureMode.CaptureTimer ? 
-                        CaptureMode.CaptureMotion : 
-                        CaptureMode.CaptureTimer;
-    println("Switched to capture mode:", currentCaptureMode);
-  } else if (key == '[' || key == '{') {
-    // Decrease motion threshold
-    motionThreshold = constrain(motionThreshold - 0.01, 0, 1);
-    println("Motion threshold: " + nf(motionThreshold, 0, 3));
-  } else if (key == ']' || key == '}') {
-    // Increase motion threshold
-    motionThreshold = constrain(motionThreshold + 0.01, 0, 1);
-    println("Motion threshold: " + nf(motionThreshold, 0, 3));
+    return;
   }
   
-  // Check for letter + arrow key combinations first
-  if (keyCode == UP) {
-    if (key == 'l' || key == 'L') {
-      loraScale = constrain(loraScale + 0.1, 0, 2);
-    } else if (key == 'e' || key == 'E') {
-      extraLoraScale = constrain(extraLoraScale + 0.1, 0, 2);
-    } else {
-      numInferenceSteps = constrain(numInferenceSteps + 1, 1, 50);
-    }
-  } else if (keyCode == DOWN) {
-    if (key == 'l' || key == 'L') {
-      loraScale = constrain(loraScale - 0.1, 0, 2);
-    } else if (key == 'e' || key == 'E') {
-      extraLoraScale = constrain(extraLoraScale - 0.1, 0, 2);
-    } else {
-      numInferenceSteps = constrain(numInferenceSteps - 1, 1, 50);
-    }
-  } else if (keyCode == LEFT) {
-    guidanceScale = constrain(guidanceScale - 0.01, 0, 10);
-  } else if (keyCode == RIGHT) {
-    guidanceScale = constrain(guidanceScale + 0.01, 0, 10);
+  // Handle regular keys with switch statement
+  switch (ciKeyPressed) {
+    case 'S':
+      // Force a new capture
+      captureAndProcess(modelVersion, currentPrompt, promptStrength);
+      break;
+      
+    case 'P':
+      // Cycle to next prompt
+      currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
+      currentPrompt = prompts[currentPromptIndex];
+      break;
+      
+    case ' ':
+      // Toggle between camera and AI view
+      transitionAlpha = (transitionAlpha > 0.5) ? 0 : 1;
+      break;
+      
+    case 'D':
+      // Toggle status display visibility
+      showStatusDisplay = !showStatusDisplay;
+      break;
+      
+    case 'F':
+      // Toggle image flipping
+      flipImage = !flipImage;
+      println("Image flipping: " + (flipImage ? "ON" : "OFF"));
+      break;
+      
+    case 'G':
+      // Toggle fast mode
+      goFast = !goFast;
+      break;
+      
+    case 'M':
+      // Cycle through available models
+      if (availableModels != null && availableModels.length > 0) {
+        currentModelIndex = (currentModelIndex + 1) % availableModels.length;
+        modelVersion = availableModels[currentModelIndex];
+        println("Switched to model:", modelVersion);
+      }
+      break;
+      
+    case 'R':
+      // Toggle random prompt mode
+      randomPrompt = !randomPrompt;
+      break;
+      
+    case 'C':
+      switchCaptureMode();
+      break;
+      
+    case 'L':
+      // Increase lora scale
+      loraScale = constrain(loraScale + 0.1, -1, 3);
+      println("Lora scale: " + nf(loraScale, 0, 1));
+      break;
+      
+    case 'K':
+      // Decrease lora scale
+      loraScale = constrain(loraScale - 0.1, -1, 3);
+      println("Lora scale: " + nf(loraScale, 0, 1));
+      break;
+      
+    case '+':
+    case '=':
+      promptStrength = constrain(promptStrength + 0.01, 0, 1);
+      break;
+      
+    case '-':
+    case '_':
+      promptStrength = constrain(promptStrength - 0.01, 0, 1);
+      break;
+      
+    case '[':
+    case '{':
+      adjustMotionThreshold(-0.01);
+      break;
+      
+    case ']':
+    case '}':
+      adjustMotionThreshold(0.01);
+      break;
+      
+    case '\t':  // TAB key
+      showSettings = !showSettings;
+      break;
+      
+    default:
+      // Handle number keys 1-9 for prompt strength
+      if (ciKeyPressed >= '1' && ciKeyPressed <= '9') {
+        promptStrength = (ciKeyPressed - '0') / 10.0;
+        println("Set prompt strength to:", nf(promptStrength, 0, 1));
+      }
+      break;
   }
 }
 
@@ -915,7 +950,6 @@ void fetchAndApplyDefaults() {
       guidanceScale = json.getFloat("guidance_scale", guidanceScale);
       outputQuality = json.getInt("output_quality", outputQuality);
       promptStrength = json.getFloat("prompt_strength", promptStrength);
-      extraLoraScale = json.getFloat("extra_lora_scale", extraLoraScale);
       numInferenceSteps = json.getInt("num_inference_steps", numInferenceSteps);
       
       println("Successfully synced parameters with server defaults");
@@ -929,20 +963,38 @@ void fetchAndApplyDefaults() {
 
 // Add this method to explicitly clean up resources when the app is closed
 void exit() {
-  // Close the camera if it's running
-  if (cam != null) {
-    cam.stop();
+  try {
+    // Close the camera if it's running and initialized
+    if (cam != null && camInitialized) {
+      cam.stop();
+    }
+    
+    // Release image resources with null checks
+    if (currentCamImage != null) {
+      currentCamImage = null;
+    }
+    if (currentAIImage != null) {
+      currentAIImage = null;
+    }
+    if (displayImage != null) {
+      displayImage = null;
+    }
+    if (blendedBuffer != null) {
+      blendedBuffer = null;
+    }
+    if (processedImageBuffer != null) {
+      processedImageBuffer = null;
+    }
+    if (previousFrame != null) {
+      previousFrame = null;
+    }
+    
+    // Request garbage collection
+    System.gc();
+  } catch (Exception e) {
+    println("Error during cleanup: " + e.getMessage());
+    e.printStackTrace();
   }
-  
-  // Release image resources
-  currentCamImage = null;
-  currentAIImage = null;
-  displayImage = null;
-  blendedBuffer = null;
-  processedImageBuffer = null;
-  
-  // Request garbage collection
-  System.gc();
   
   // Call the super method to finish exiting
   super.exit();

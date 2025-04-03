@@ -72,7 +72,7 @@ MODEL_VERSIONS = {
     },
     "neo-impressionism": {
         "version_id": "7cbedb5821207721873a5dcf248a5d8fe232214e32e5b6b94c4206c218be631e",
-        "trigger": "neo-impressionism"
+        "trigger": "NEO_IMPRESSIONISM"
     },
     "condensation": {
         "version_id": "7d174a0ee7e9769758117762f7069646b3478e09cca605c2c2284b349af84f2d",
@@ -84,7 +84,7 @@ MODEL_VERSIONS = {
     },
     "spittingimage": {
         "version_id": "151060b63f5e1a3c7679b43e060253f6be0e9b1e4af9a3e5adf15061e7fd6cf0",
-        "trigger": "spitting image"
+        "trigger": "SPITTING_IMAGE"
     },
     "jameswebb": {
         "version_id": "7b2411574454fb1a1b4e3087f48dcb138cd5e0d3d4d901be2cbb903fa71abd19",
@@ -92,7 +92,7 @@ MODEL_VERSIONS = {
     },
     "cyberpunk": {
         "version_id": "5d0cefd0746b833042b384c3a310bc4d1f9d1304ec59ba93e75097d40b967180",
-        "trigger": "cyber"
+        "trigger": "CYBER"
     }
 }
 
