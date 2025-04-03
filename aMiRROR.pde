@@ -48,7 +48,7 @@ String[] availableModels;
 int currentModelIndex = 0;
 
 // Replicate model parameters
-String currentPrompt = "a mirror or";  // Match server default
+String currentPrompt = "mirror mmiror on the wall";  // Match server default
 String modelVersion = "mysubconscious";  // Default model version
 boolean goFast = true;  // Match server default
 float loraScale = 1.0;  // Match server default
@@ -766,10 +766,12 @@ void displayStatus() {
     }
     
     // Show camera preview at 1/8 scale
-    int previewX = (300 - currentCamImage.width/8) / 2 + 10;
-    int previewY = 430;
-    drawCameraPreview(previewX, previewY);
-  } else {
+     if (currentCamImage != null ) {
+      int previewX = (300 - currentCamImage.width/8) / 2 + 10;
+      int previewY = 430;
+      drawCameraPreview(previewX, previewY);
+    }
+ } else {
     // Show minimal info in the upper left
     rect(10, 10, 300, 300);
     
@@ -797,9 +799,11 @@ void displayStatus() {
     }
     
     // Show camera preview at 1/8 scale in minimal mode
-    int previewX = (300 - currentCamImage.width/8) / 2 + 10;
-    int previewY = 200;
-    drawCameraPreview(previewX, previewY);
+    if (currentCamImage != null ) {
+      int previewX = (300 - currentCamImage.width/8) / 2 + 10;
+      int previewY = 200;
+      drawCameraPreview(previewX, previewY);
+    }
   }
 }
 
