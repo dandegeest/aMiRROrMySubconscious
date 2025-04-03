@@ -10,6 +10,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Base64;
+import java.io.ByteArrayOutputStream;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+
 
 // Camera and display settings
 Capture cam;
@@ -213,10 +218,8 @@ void setup() {
   size(1280, 720);
   frameRate(30);
   
-  // Initialize directories
-  File capturePath = new File(dataPath(captureDir));
+  // Initialize output directory only
   File outputPath = new File(dataPath(outputDir));
-  capturePath.mkdir();
   outputPath.mkdir();
   
   // Initialize camera
@@ -520,14 +523,12 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   requestInProgress = true;
   requestStartTime = millis();
   
-  // Generate timestamp once to use for both files
+  // Generate timestamp for output file only
   String timestamp = getCurrentTimestamp();
-  String captureFilename = captureDir + "/capture_" + timestamp + ".jpg";
   String outputFilename = outputDir + "/fofr_" + timestamp + ".png";
   
-  // Flip the image vertically before saving if enabled
-  PImage imageToSave = flipImage ? flipImageVertically(currentCamImage) : currentCamImage;
-  imageToSave.save(dataPath(captureFilename));
+  // Flip the image vertically if enabled
+  PImage imageToProcess = flipImage ? flipImageVertically(currentCamImage) : currentCamImage;
   
   // Create the JSON payload for the request
   JSONObject json = new JSONObject();
@@ -544,7 +545,7 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   json.setString("lora", "fofr_loras");
   json.setInt("width", displayWidth);
   json.setInt("height", displayHeight);
-  json.setString("image", encodeImageToBase64(captureFilename));
+  json.setString("image", encodeImageToBase64(imageToProcess));
   json.setBoolean("go_fast", goFast);
   json.setFloat("lora_scale", loraScale);
   json.setFloat("extra_lora_scale", 1.0);  // Always set to 1
@@ -564,6 +565,31 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   });
   t.setDaemon(true); // Make thread a daemon so it won't prevent app from exiting
   t.start();
+}
+
+String encodeImageToBase64(PImage img) {
+  img.loadPixels(); // ensure pixels are updated
+
+  // Convert to BufferedImage
+  BufferedImage bimg = new BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_RGB);
+  for (int y = 0; y < img.height; y++) {
+    for (int x = 0; x < img.width; x++) {
+      bimg.setRGB(x, y, img.pixels[y * img.width + x]);
+    }
+  }
+
+  // Encode to PNG bytes
+  try {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ImageIO.write(bimg, "png", baos);
+    byte[] imageBytes = baos.toByteArray();
+
+    // Convert to Base64 string with data URI prefix
+    return "data:image/png;base64," + Base64.getEncoder().encodeToString(imageBytes);
+  } catch (Exception e) {
+    println("Error encoding image: " + e.getMessage());
+    return null;
+  }
 }
 
 void sendToFlaskServer(String jsonPayload, String outputFilename) {
@@ -621,25 +647,6 @@ void sendToFlaskServer(String jsonPayload, String outputFilename) {
   
   // Request is complete
   requestInProgress = false;
-}
-
-String encodeImageToBase64(String imagePath) {
-  try {
-    // Load the image file
-    File file = new File(dataPath(imagePath));
-    FileInputStream fis = new FileInputStream(file);
-    byte[] data = new byte[(int) file.length()];
-    fis.read(data);
-    fis.close();
-    
-    // Convert to base64
-    String base64 = Base64.getEncoder().encodeToString(data);
-    return "data:image/png;base64," + base64;  // Change to PNG format
-  } 
-  catch (Exception e) {
-    println("Error encoding image: " + e.getMessage());
-    return "";
-  }
 }
 
 void downloadImage(String url, String outputFilename) {
