@@ -37,8 +37,7 @@ int requestStartTime = 0;
 int requestTimeout = 60000; // 1 minute timeout
 
 // File management
-String captureDir = "captures";
-String outputDir = "myconscious";
+String outputDir = "replicate.com";
 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
 
 // Server settings
@@ -418,6 +417,11 @@ void initializeCamera() {
 }
 
 PImage processImage(Capture camImage) {
+  // If camera image is already the correct size, return it directly
+  if (camImage.width == displayWidth && camImage.height == displayHeight) {
+    return camImage;
+  }
+  
   // Create an image with the target display dimensions only once
   if (processedImageBuffer == null) {
     processedImageBuffer = createImage(displayWidth, displayHeight, RGB);
@@ -525,7 +529,7 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   
   // Generate timestamp for output file only
   String timestamp = getCurrentTimestamp();
-  String outputFilename = outputDir + "/fofr_" + timestamp + ".png";
+  String outputFilename = outputDir + "/fofr_" + modelVersion + "_" + timestamp + ".png";
   
   // Flip the image vertically if enabled
   PImage imageToProcess = flipImage ? flipImageVertically(currentCamImage) : currentCamImage;
