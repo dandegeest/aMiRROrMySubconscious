@@ -4,10 +4,33 @@
 
 aMiRROR is an interactive Processing sketch that uses AI to transform your self-portrait into artistic interpretations. It captures your image through a webcam and processes it using various AI models to create unique, artistic representations.
 
+## Requirements
+
+### Processing Libraries
+- **Video Library**
+  - Open Processing
+  - Go to Sketch > Import Library > Add Library
+  - Search for "Video"
+  - Install "Video | GStreamer-based video library for Processing" by The Processing Foundation
+
+### Java Version
+The sketch requires **Java 11 or newer** as it uses Java's built-in HTTP client.
+
+To check your Java version in Processing:
+1. Open Processing
+2. Go to Help > About Processing
+3. It should show which Java version is being used
+
+If you need to update Java, download the latest JDK from [Oracle](https://www.oracle.com/java/technologies/downloads/) or [OpenJDK](https://adoptium.net/).
+
+After installing the Video library and ensuring you have Java 11+, restart Processing and open the aMiRROR.pde sketch.
+
 ## Example Outputs
 
-<div style="display: flex; justify-content: center;">
-  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image" width="75%"/>
+<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1""/>
+  <img src="images/aimirror1.png" alt="AI Generated Image 2" width="45%"/>
+  <img src="images/aimirror2.png" alt="AI Generated Image 3" width="45%"/>
 </div>
 
 ## Features
