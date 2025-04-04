@@ -1,76 +1,114 @@
-# Replicate API Flask Server
+# aMiRROR - Interactive AI Mirror
 
-A simple Flask server that serves as an API wrapper for the Replicate.com API, specifically for the `fofr/flux-my-subconscious` model.
+![aMiRROR](images/blended.png)
+
+aMiRROR is an interactive Processing sketch that uses AI to transform your self-portrait into artistic interpretations. It captures your image through a webcam and processes it using various AI models to create unique, artistic representations.
+
+## Example Outputs
+
+<div style="display: flex; justify-content: center;">
+  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image" width="75%"/>
+</div>
+
+## Features
+
+- Real-time webcam capture
+- Motion detection for automatic capture
+- Multiple AI model support
+  - [mysubconscious](https://replicate.com/fofr/mysubconscious)
+  - [klingon](https://replicate.com/fofr/klingon)
+  - [neo-impressionism](https://replicate.com/fofr/neo-impressionism)
+  - [condensation](https://replicate.com/fofr/condensation)
+  - [weird](https://replicate.com/fofr/weird)
+  - [spittingimage](https://replicate.com/fofr/spittingimage)
+  - [jameswebb](https://replicate.com/fofr/jameswebb)
+  - [cyberpunk](https://replicate.com/fofr/cyberpunk)
+- Customizable prompts and parameters
+- Fullscreen mode support
+- Automatic image saving
+- Interactive controls
 
 ## Setup
 
+### Processing Sketch Setup
+
 1. Clone this repository
-2. Install dependencies:
+2. Open `aMiRROR.pde` in Processing
+3. Install required Processing libraries:
+   - Video (for webcam support)
+
+### Flask Server Setup
+
+The sketch requires a Flask server to communicate with the Replicate API.
+
+1. Install Python dependencies:
    ```
    pip install -r requirements.txt
    ```
-3. Copy `.env.example` to `.env` and add your Replicate API token:
+2. Copy `.env.example` to `.env` and add your Replicate API token:
    ```
    cp .env.example .env
    ```
-4. Edit `.env` and add your Replicate API token
+3. Edit `.env` and add your Replicate API token
 
-## Running the Server
+## Running the Application
 
-```
-python app.py
-```
+1. Start the Flask server:
+   ```
+   python app.py
+   ```
+   The server will run on http://localhost:5000 by default.
 
-The server will run on http://localhost:5000 by default.
+2. Run the Processing sketch in Processing IDE
 
-## API Endpoints
+## Controls
 
-### POST /generate
+- `SPACE`: Toggle between camera and AI view
+- `S`: Force a new capture
+- `P`: Cycle to next prompt
+- `F`: Toggle image flipping
+- `M`: Cycle through available models
+- `R`: Toggle random prompt mode
+- `C`: Switch capture mode (Timer/Motion)
+- `D`: Toggle status display visibility
+- `G`: Toggle fast mode
+- `TAB`: Toggle settings panel
+- `[`/`]`: Adjust motion threshold
+- `1-9`: Set prompt strength (0.1-0.9)
+- `+`/`-`: Fine-tune prompt strength
+- `UP`/`DOWN`: Adjust inference steps
+- `LEFT`/`RIGHT`: Adjust guidance scale
+- `L`/`K`: Adjust lora scale
 
+## Technical Details
+
+### Processing Sketch
+
+The sketch uses:
+- Webcam capture for real-time video
+- Motion detection for automatic triggering
+- Base64 encoding for image transmission
+- Multi-threading for API communication
+- Memory-optimized image processing
+
+### Flask Server
+
+The server provides these endpoints:
+
+#### POST /generate
 Generate an image using the fofr/flux-my-subconscious model.
 
 **Request Body:**
-
 ```json
 {
   "prompt": "Your prompt text",
   "width": 720,
   "height": 1280,
-  "image": "optional_image_url_or_base64_or_filepath"
+  "image": "base64_encoded_image"
 }
 ```
-
-All parameters for the model are supported. The defaults are:
-
-```json
-{
-  "model": "schnell",
-  "width": 720,
-  "height": 1280,
-  "prompt": "MY_SUBCONSCIOUS",
-  "go_fast": false,
-  "lora_scale": 1,
-  "megapixels": "1",
-  "num_outputs": 1,
-  "aspect_ratio": "custom",
-  "output_format": "png",
-  "guidance_scale": 3,
-  "output_quality": 80,
-  "prompt_strength": 0.8,
-  "extra_lora_scale": 1,
-  "num_inference_steps": 4
-}
-```
-
-**Image Input Formats:**
-
-The `image` parameter can be any of:
-- URL starting with `http`
-- Base64 encoded image starting with `data:image`
-- Local file path
 
 **Response:**
-
 ```json
 {
   "success": true,
@@ -78,12 +116,10 @@ The `image` parameter can be any of:
 }
 ```
 
-### GET /health
-
+#### GET /health
 Health check endpoint.
 
 **Response:**
-
 ```json
 {
   "status": "healthy"
@@ -93,27 +129,25 @@ Health check endpoint.
 ## Example Usage
 
 Using curl:
-
 ```bash
 curl -X POST http://localhost:5000/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "a beautiful landscape",
-    "image": "https://example.com/input.jpg"
+    "prompt": "The words \"YOUR_PROMPT\" on a steamed over mirror",
+    "width": 720,
+    "height": 1280,
+    "image": "data:image/png;base64,..."
   }'
 ```
 
-Using Python requests:
+## Requirements
 
-```python
-import requests
+- Processing 4.x
+- Python 3.x
+- Webcam
+- Replicate API token
+- Internet connection
 
-response = requests.post(
-    "http://localhost:5000/generate",
-    json={
-        "prompt": "a beautiful landscape",
-        "image": "https://example.com/input.jpg"
-    }
-)
-print(response.json())
-``` 
+## License
+
+MIT License 
