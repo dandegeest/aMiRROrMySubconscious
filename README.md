@@ -2,7 +2,13 @@
 
 ![aMiRROR](images/blended.png)
 
-aMiRROR is an interactive Processing sketch that uses AI to transform your self-portrait into artistic interpretations. It captures your image through a webcam and processes it using various AI models to create unique, artistic representations.
+aMiRROR is an interactive Processing sketch that uses AI to transform your self-portrait into artistic and/or weird AI interpretations. It captures your image through a webcam and processes it using various AI image to image fine tuned LORA models to create unique, artistic representations.
+
+This project will be used for an art installation titled "a MiRRor My Subconscious", featuring a simulated mirror using an LCD panel mounted in a gilded frame. The installation will capture and process the portraits of onlookers in real-time, transforming their reflections into AI-generated artistic interpretations. The piece explores the intersection of technology, art, and human perception, creating a dynamic and interactive experience that challenges our understanding of self-reflection in the digital age.
+
+Special thanks to [@fofr_ai](https://www.threads.net/@fofr_ai) for the detailed explanation of fine tuning LORA models on [Replicate.com](https://replicate.com/fofr) and for the models used in this project.
+
+This project was built with the help of [Cursor](https://cursor.sh), an AI-powered IDE that made development and debugging a breeze. 🚀 *high five* ✋
 
 ## Requirements
 
@@ -38,14 +44,14 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
 - Real-time webcam capture
 - Motion detection for automatic capture
 - Multiple AI model support
-  - [mysubconscious](https://replicate.com/fofr/mysubconscious)
-  - [klingon](https://replicate.com/fofr/klingon)
-  - [neo-impressionism](https://replicate.com/fofr/neo-impressionism)
-  - [condensation](https://replicate.com/fofr/condensation)
-  - [weird](https://replicate.com/fofr/weird)
-  - [spittingimage](https://replicate.com/fofr/spittingimage)
-  - [jameswebb](https://replicate.com/fofr/jameswebb)
-  - [cyberpunk](https://replicate.com/fofr/cyberpunk)
+  - [My Subconscious](https://replicate.com/fofr/flux-my-subconscious)
+  - [Klingon](https://replicate.com/fofr/flux-klingon)
+  - [Neo-Impressionism](https://replicate.com/fofr/flux-neo-impressionism)
+  - [Condensation](https://replicate.com/fofr/flux-condensation)
+  - [Weird](https://replicate.com/fofr/flux-weird)
+  - [Spitting Image](https://replicate.com/fofr/flux-spitting-image)
+  - [James Webb](https://replicate.com/fofr/sdxl-jwst)
+  - [Cyberpunk](https://replicate.com/fofr/flux-cyberpunk-typeface)
 - Customizable prompts and parameters
 - Fullscreen mode support
 - Automatic image saving
