@@ -29,7 +29,7 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
 
 <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
   <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1""/>
-  <img src="images/aimirror1.png" alt="AI Generated Image 2" width="50"/>
+  <img src="images/aimirror1.png" alt="AI Generated Image 2" width="50%"/>
   <img src="images/aimirror2.png" alt="AI Generated Image 3" width="50%"/>
 </div>
 
