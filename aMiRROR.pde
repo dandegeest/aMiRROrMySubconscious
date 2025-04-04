@@ -158,12 +158,19 @@ enum CaptureMode {
 CaptureMode currentCaptureMode = CaptureMode.CaptureMotion;
 
 // Add these with other state variables
-float motionThreshold = 0.02;  // Default threshold for motion detection (0-1)
+float motionThreshold = 0.03;  // Adjusted for 4x4 pixel sampling (was 0.02)
 PImage previousFrame = null;  // Store the previous frame for motion detection
 boolean motionDetected = false;  // Flag to prevent multiple captures from same motion event
 
 // Add this with other state variables
 float currentMotion = 0;  // Store the current motion value
+
+// Add these variables at the top with other state variables
+float lastFrameTime = 0;
+float targetFrameTime = 1000.0f / 30.0f; // 30 FPS target
+boolean skipFrame = false;
+float cachedAspectRatio1 = 0;
+float cachedAspectRatio2 = 0;
 
 // Add this function before setup()
 PImage flipImageVertically(PImage source) {
@@ -348,26 +355,33 @@ void drawCaptureMotion() {
 }
 
 float calculateMotion(PImage prev, PImage curr) {
+  if (prev == null || curr == null) return 0;
+  
+  // Sample every 4th pixel for faster motion detection
+  int sampleSize = 4;
   float totalDiff = 0;
   int pixelCount = 0;
   
   prev.loadPixels();
   curr.loadPixels();
   
-  // Compare each pixel between frames
-  for (int i = 0; i < prev.pixels.length; i++) {
-    color prevColor = prev.pixels[i];
-    color currColor = curr.pixels[i];
-    
-    // Calculate difference in brightness
-    float prevBrightness = brightness(prevColor);
-    float currBrightness = brightness(currColor);
-    
-    totalDiff += abs(prevBrightness - currBrightness);
-    pixelCount++;
+  for (int y = 0; y < prev.height; y += sampleSize) {
+    for (int x = 0; x < prev.width; x += sampleSize) {
+      int i = y * prev.width + x;
+      if (i < prev.pixels.length && i < curr.pixels.length) {
+        color prevColor = prev.pixels[i];
+        color currColor = curr.pixels[i];
+        
+        // Use a faster brightness calculation
+        float prevBrightness = (red(prevColor) + green(prevColor) + blue(prevColor)) / 3.0f;
+        float currBrightness = (red(currColor) + green(currColor) + blue(currColor)) / 3.0f;
+        
+        totalDiff += abs(prevBrightness - currBrightness);
+        pixelCount++;
+      }
+    }
   }
   
-  // Return average difference normalized to 0-1 range
   return totalDiff / (pixelCount * 255);
 }
 
@@ -389,7 +403,7 @@ void initializeCamera() {
   for (int i = 0; i < cameras.length; i++) {
     if (cameras[i].contains("NexiGo N960E")) {
       println("Selected NexiGo camera: " + cameras[i]);
-      cam = new Capture(this, cameras[i]);
+      cam = new Capture(this, 1280, 720, cameras[i]);
       camInitialized = true;
       cam.start();
       return;
@@ -400,7 +414,7 @@ void initializeCamera() {
   for (int i = 0; i < cameras.length; i++) {
     if (cameras[i].contains("720")) {
       println("Selected 720p camera: " + cameras[i]);
-      cam = new Capture(this, cameras[i]);
+      cam = new Capture(this, 1280, 720, cameras[i]);
       camInitialized = true;
       cam.start();
       return;
@@ -410,13 +424,22 @@ void initializeCamera() {
   // If no 720p camera, use the first available camera
   if (!camInitialized && cameras.length > 0) {
     println("Selected default camera: " + cameras[0]);
-    cam = new Capture(this, cameras[0]);
+    cam = new Capture(this, 1280, 720, cameras[0]);
     camInitialized = true;
     cam.start();
   }
 }
 
 PImage processImage(Capture camImage) {
+  // Skip frame if we're falling behind
+  float currentTime = millis();
+  if (currentTime - lastFrameTime < targetFrameTime) {
+    skipFrame = true;
+  } else {
+    skipFrame = false;
+  }
+  lastFrameTime = currentTime;
+  
   // If camera image is already the correct size, return it directly
   if (camImage.width == displayWidth && camImage.height == displayHeight) {
     return camImage;
@@ -427,87 +450,102 @@ PImage processImage(Capture camImage) {
     processedImageBuffer = createImage(displayWidth, displayHeight, RGB);
   }
   
-  // Calculate scaling to maintain aspect ratio and center crop
-  float aspectRatio1 = (float)displayWidth / (float)displayHeight;
-  float aspectRatio2 = (float)cam.width / (float)cam.height;
+  // Cache aspect ratio calculations
+  if (cachedAspectRatio1 == 0) {
+    cachedAspectRatio1 = (float)displayWidth / (float)displayHeight;
+  }
+  if (cachedAspectRatio2 == 0) {
+    cachedAspectRatio2 = (float)cam.width / (float)cam.height;
+  }
   
   float scaleFactor;
   int sourceX, sourceY, sourceWidth, sourceHeight;
   
-  if (aspectRatio1 > aspectRatio2) {
-    // Target is wider than source - scale to match width and crop height
+  if (cachedAspectRatio1 > cachedAspectRatio2) {
     scaleFactor = (float)displayWidth / (float)cam.width;
     sourceX = 0;
     sourceWidth = cam.width;
     sourceHeight = (int)(displayHeight / scaleFactor);
-    sourceY = (cam.height - sourceHeight) / 2; // Center vertically
+    sourceY = (cam.height - sourceHeight) / 2;
   } else {
-    // Target is taller than source - scale to match height and crop width
     scaleFactor = (float)displayHeight / (float)cam.height;
     sourceY = 0;
     sourceHeight = cam.height;
     sourceWidth = (int)(displayWidth / scaleFactor);
-    sourceX = (cam.width - sourceWidth) / 2; // Center horizontally
+    sourceX = (cam.width - sourceWidth) / 2;
   }
   
-  // Resize and crop the camera image to fit the display
-  processedImageBuffer.copy(camImage, sourceX, sourceY, sourceWidth, sourceHeight, 
-               0, 0, displayWidth, displayHeight);
+  // Use direct pixel array access for better performance
+  camImage.loadPixels();
+  processedImageBuffer.loadPixels();
   
+  for (int y = 0; y < displayHeight; y++) {
+    for (int x = 0; x < displayWidth; x++) {
+      int srcX = sourceX + (int)(x / scaleFactor);
+      int srcY = sourceY + (int)(y / scaleFactor);
+      if (srcX >= 0 && srcX < cam.width && srcY >= 0 && srcY < cam.height) {
+        processedImageBuffer.pixels[y * displayWidth + x] = camImage.pixels[srcY * cam.width + srcX];
+      }
+    }
+  }
+  
+  processedImageBuffer.updatePixels();
   return processedImageBuffer;
 }
 
 void updateDisplay() {
-  // Handle transition between camera and AI images
-  if (currentAIImage != null) {
-    try {
-      // Create a local reference to avoid race conditions
-      PImage aiImageRef = currentAIImage;
-      
-      // We have an AI image, blend with camera
-      // Create blendedBuffer only once and reuse it
-      if (blendedBuffer == null) {
-        blendedBuffer = createImage(displayWidth, displayHeight, RGB);
-      }
-      
-      // If transitioning, update alpha
-      if (isTransitioning) {
-        transitionAlpha += 0.067; // Speed of transition (1/15 for 0.5s at 30fps)
-        if (transitionAlpha >= 1) {
-          transitionAlpha = 1;
-          isTransitioning = false;
-        }
-      }
-      
-      // Additional null check for currentCamImage
-      if (currentCamImage == null) return;
-      
-      // Make sure both images have pixels loaded
-      currentCamImage.loadPixels();
-      aiImageRef.loadPixels();
-      blendedBuffer.loadPixels();
-      
-      // Blend the images with safer access
-      for (int i = 0; i < blendedBuffer.pixels.length; i++) {
-        // Add bounds check to avoid index issues
-        if (i < currentCamImage.pixels.length && i < aiImageRef.pixels.length) {
-          color camColor = currentCamImage.pixels[i];
-          color aiColor = aiImageRef.pixels[i];
-          blendedBuffer.pixels[i] = lerpColor(camColor, aiColor, transitionAlpha);
-        }
-      }
-      blendedBuffer.updatePixels();
-      
-      // Simply point to our buffer instead of creating a new image
-      displayImage = blendedBuffer;
-    } catch (Exception e) {
-      // Log the error and gracefully handle it
-      println("Error in updateDisplay: " + e.getMessage());
-      // Fall back to showing just the camera image
-      displayImage = currentCamImage;
+  if (currentAIImage == null) {
+    displayImage = currentCamImage;
+    return;
+  }
+  
+  try {
+    PImage aiImageRef = currentAIImage;
+    
+    if (blendedBuffer == null) {
+      blendedBuffer = createImage(displayWidth, displayHeight, RGB);
     }
-  } else {
-    // If no AI image yet, just show camera
+    
+    if (isTransitioning) {
+      transitionAlpha += 0.067;
+      if (transitionAlpha >= 1) {
+        transitionAlpha = 1;
+        isTransitioning = false;
+      }
+    }
+    
+    if (currentCamImage == null) return;
+    
+    // Use direct pixel array access for better performance
+    currentCamImage.loadPixels();
+    aiImageRef.loadPixels();
+    blendedBuffer.loadPixels();
+    
+    for (int i = 0; i < blendedBuffer.pixels.length; i++) {
+      if (i < currentCamImage.pixels.length && i < aiImageRef.pixels.length) {
+        color camColor = currentCamImage.pixels[i];
+        color aiColor = aiImageRef.pixels[i];
+        
+        // Fast color blending without lerpColor
+        float r1 = red(camColor);
+        float g1 = green(camColor);
+        float b1 = blue(camColor);
+        float r2 = red(aiColor);
+        float g2 = green(aiColor);
+        float b2 = blue(aiColor);
+        
+        blendedBuffer.pixels[i] = color(
+          r1 + (r2 - r1) * transitionAlpha,
+          g1 + (g2 - g1) * transitionAlpha,
+          b1 + (b2 - b1) * transitionAlpha
+        );
+      }
+    }
+    
+    blendedBuffer.updatePixels();
+    displayImage = blendedBuffer;
+  } catch (Exception e) {
+    println("Error in updateDisplay: " + e.getMessage());
     displayImage = currentCamImage;
   }
 }
@@ -538,9 +576,10 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   JSONObject json = new JSONObject();
   json.setString("model_version", modelVersion);
   
-  // Set the prompt based on random toggle
+  // Set the prompt based on random toggle and format it
   String promptToUse = randomPrompt ? prompts[int(random(prompts.length))] : prompt;
-  json.setString("prompt", promptToUse);
+  String formattedPrompt = "The word \"" + promptToUse + "\" on a steamed over mirror";
+  json.setString("prompt", formattedPrompt);
   
   // Send prompt strength as a float
   json.setFloat("prompt_strength", promptStrength);
@@ -1049,4 +1088,18 @@ void fetchAvailableModels() {
     // Fallback to default model if server request fails
     availableModels = new String[]{"mysubconscious"};
   }
+}
+
+// Add this method to clean up resources
+void cleanupResources() {
+  if (blendedBuffer != null) {
+    blendedBuffer = null;
+  }
+  if (processedImageBuffer != null) {
+    processedImageBuffer = null;
+  }
+  if (previousFrame != null) {
+    previousFrame = null;
+  }
+  System.gc();
 }
