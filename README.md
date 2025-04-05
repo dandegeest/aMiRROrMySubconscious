@@ -1,4 +1,4 @@
-# aMiRROR - Interactive AI Mirror
+# aMiRROrMySubconscious? - Interactive AI Mirror
 
 ![aMiRROR](images/blended.png)
 
