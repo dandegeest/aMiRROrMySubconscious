@@ -172,6 +172,12 @@ boolean skipFrame = false;
 float cachedAspectRatio1 = 0;
 float cachedAspectRatio2 = 0;
 
+// Add this with other boolean state variables
+boolean galleryMode = true;  // Gallery mode is on by default
+
+// Add this with other state variables
+float[] guidanceScaleValues = {1.0, 1.5, 2.0, 2.5, 3.0, 3.5};
+
 // Add this function before setup()
 PImage flipImageVertically(PImage source) {
   source.loadPixels();
@@ -288,23 +294,35 @@ void draw() {
     image(displayImage, 0, 0, width, height);
   }
   
-  // Draw capture indicator if generation is in progress
+  // Display status information
+  displayStatus();
+  
+  // Draw capture indicator if generation is in progress - always draw last
   if (requestInProgress) {
     pushStyle();
     noStroke();
-    fill(255, 0, 0);  // Red color
-    circle(width - 30, 30, 20);  // Draw circle in upper right corner
+    fill(255, 0, 0, 255);  // Solid red color
+    circle(width - 50, 50, 50);  // Larger circle in upper right corner
     popStyle();
   }
-  
-  // Display status information
-  displayStatus();
 }
 
 void drawCaptureTimer() {
   // Check if it's time for a new capture
   if (!requestInProgress && millis() - lastCaptureTime > captureInterval) {
-    captureAndProcess();
+    if (galleryMode) {
+      // In gallery mode, use random settings
+      String randomModel = availableModels[int(random(availableModels.length))];
+      String randomPrompt = prompts[int(random(prompts.length))];
+      float randomStrength = random(0.5, 0.75);
+      boolean randomFlip = random(1) > 0.5;
+      float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
+      flipImage = randomFlip;
+      guidanceScale = randomGuidance;
+      captureAndProcess(randomModel, randomPrompt, randomStrength);
+    } else {
+      captureAndProcess();
+    }
   }
   
   // Check for timeout on requests
@@ -335,7 +353,19 @@ void drawCaptureMotion() {
   // Check if motion exceeds threshold and we're not already processing
   if (currentMotion > motionThreshold && !requestInProgress && !motionDetected) {
     println("Motion detected: " + nf(currentMotion, 0, 3));
-    captureAndProcess(modelVersion, currentPrompt, promptStrength);
+    if (galleryMode) {
+      // In gallery mode, use random settings
+      String randomModel = availableModels[int(random(availableModels.length))];
+      String randomPrompt = prompts[int(random(prompts.length))];
+      float randomStrength = random(0.5, 0.75);
+      boolean randomFlip = random(1) > 0.5;
+      float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
+      flipImage = randomFlip;
+      guidanceScale = randomGuidance;
+      captureAndProcess(randomModel, randomPrompt, randomStrength);
+    } else {
+      captureAndProcess(modelVersion, currentPrompt, promptStrength);
+    }
     motionDetected = true;
   } else if (currentMotion <= motionThreshold && !requestInProgress) {
     motionDetected = false;
@@ -344,10 +374,22 @@ void drawCaptureMotion() {
   // Check for timeout (30 seconds) and auto-capture if needed
   if (!requestInProgress && millis() - lastCaptureTime > 30000) {
     println("No motion detected for 30 seconds, auto-capturing...");
-    // Select a random two-word prompt
-    String randomPrompt = autoCapturePrompts[int(random(autoCapturePrompts.length))];
-    println("Using auto-capture prompt: " + randomPrompt);
-    captureAndProcess("condensation", randomPrompt, 0.9);
+    if (galleryMode) {
+      // In gallery mode, use random settings
+      String randomModel = availableModels[int(random(availableModels.length))];
+      String randomPrompt = prompts[int(random(prompts.length))];
+      float randomStrength = random(0.5, 0.75);
+      boolean randomFlip = random(1) > 0.5;
+      float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
+      flipImage = randomFlip;
+      guidanceScale = randomGuidance;
+      captureAndProcess(randomModel, randomPrompt, randomStrength);
+    } else {
+      // Select a random two-word prompt
+      String randomPrompt = autoCapturePrompts[int(random(autoCapturePrompts.length))];
+      println("Using auto-capture prompt: " + randomPrompt);
+      captureAndProcess("condensation", randomPrompt, 0.9);
+    }
   }
   
   // Update previous frame
@@ -562,7 +604,7 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   System.gc();
   
   lastCaptureTime = millis();
-  requestInProgress = true;
+  requestInProgress = true;  // Set flag at the start
   requestStartTime = millis();
   
   // Generate timestamp for output file only
@@ -603,7 +645,12 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   // Send to the Flask server in a separate thread to avoid blocking
   Thread t = new Thread(new Runnable() {
     public void run() {
-      sendToFlaskServer(json.toString(), outputFilename);
+      try {
+        sendToFlaskServer(json.toString(), outputFilename);
+      } catch (Exception e) {
+        println("Error in request thread: " + e.getMessage());
+        requestInProgress = false;  // Ensure flag is cleared on error
+      }
     }
   });
   t.setDaemon(true); // Make thread a daemon so it won't prevent app from exiting
@@ -678,18 +725,18 @@ void sendToFlaskServer(String jsonPayload, String outputFilename) {
         lastCaptureTime = millis(); // Make sure the image displays for 5 seconds if request took longer
       } else {
         println("Error in response: " + response.body());
+        requestInProgress = false;
       }
     } else {
       println("HTTP error: " + statusCode);
+      requestInProgress = false;
     }
   } 
   catch (Exception e) {
     println("Error sending to server: " + e.getMessage());
     e.printStackTrace();
+    requestInProgress = false;
   }
-  
-  // Request is complete
-  requestInProgress = false;
 }
 
 void downloadImage(String url, String outputFilename) {
@@ -753,6 +800,10 @@ void downloadImage(String url, String outputFilename) {
   } catch (Exception e) {
     println("Error downloading image: " + e.getClass().getName() + " - " + e.getMessage());
     e.printStackTrace();
+  } finally {
+    // Only set requestInProgress to false here, after everything is complete
+    requestInProgress = false;
+    println("Request completed, red dot should disappear");
   }
 }
 
@@ -766,7 +817,7 @@ void displayStatus() {
   
   if (showSettings) {
     // Show expanded settings panel in the upper left
-    rect(10, 10, 300, 550);
+    rect(10, 10, 300, 550);  // Reduced height since we removed some items
     
     fill(255);
     textSize(16);
@@ -777,53 +828,50 @@ void displayStatus() {
     text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 70);
     text("Model: " + modelVersion + " (M to cycle)", 20, 90);
     text("Random Prompt: " + (randomPrompt ? "ON" : "OFF") + " (R to toggle)", 20, 110);
-    text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 130);
-    text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 150);
+    text("Gallery Mode: " + (galleryMode ? "ON" : "OFF") + " (G to toggle)", 20, 130);
+    text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 150);
+    text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 170);
     
     // Camera settings
-    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 170);
+    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 190);
     
     // Generation settings
-    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 190);
-    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 210);
-    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 230);
-    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 250);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 270);
-    
-    // Advanced settings
-    text("Megapixels: " + megapixels, 20, 290);
-    text("Quality: " + outputQuality, 20, 310);
+    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 210);
+    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 230);
+    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 250);
+    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 270);
+    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 290);
     
     // Status and motion settings
     if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 330);
-      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 350);
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
+      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 310);
+      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 330);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 350);
       if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 370);
       } else {
-        text("MOTION", 20, 390);
+        text("MOTION", 20, 370);
       }
-      text("Press TAB to hide settings", 20, 410);
+      text("Press TAB to hide settings", 20, 390);
     } else {
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 330);
+      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 310);
       if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 350);
+        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 330);
       } else {
-        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 350);
+        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 330);
       }
-      text("Press TAB to hide settings", 20, 370);
+      text("Press TAB to hide settings", 20, 350);
     }
     
     // Show camera preview at 1/8 scale
-     if (currentCamImage != null ) {
+    if (currentCamImage != null) {
       int previewX = (300 - currentCamImage.width/8) / 2 + 10;
-      int previewY = 430;
+      int previewY = 400;  // Adjusted position after removing items
       drawCameraPreview(previewX, previewY);
     }
- } else {
+  } else {
     // Show minimal info in the upper left
-    rect(10, 10, 300, 300);
+    rect(10, 10, 300, 350);
     
     fill(255);
     textSize(14);
@@ -834,24 +882,25 @@ void displayStatus() {
     text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
     text("Model: " + modelVersion, 20, 90);
     text("Mode: " + currentCaptureMode, 20, 110);
-    text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 130);
-    text("Flip: " + (flipImage ? "ON" : "OFF"), 20, 150);
+    text("Gallery: " + (galleryMode ? "ON" : "OFF"), 20, 130);
+    text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 150);
+    text("Flip: " + (flipImage ? "ON" : "OFF"), 20, 170);
     
     // Add motion threshold to minimal display when in motion mode
     if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion: " + nf(motionThreshold, 0, 2), 20, 170);
+      text("Motion: " + nf(motionThreshold, 0, 2), 20, 190);
     }
     
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 190);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 210);
     } else {
-      text(currentCaptureMode == CaptureMode.CaptureMotion ? "MOTION" : "Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 190);
+      text(currentCaptureMode == CaptureMode.CaptureMotion ? "MOTION" : "Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 210);
     }
     
     // Show camera preview at 1/8 scale in minimal mode
-    if (currentCamImage != null ) {
+    if (currentCamImage != null) {
       int previewX = (300 - currentCamImage.width/8) / 2 + 10;
-      int previewY = 200;
+      int previewY = 230;
       drawCameraPreview(previewX, previewY);
     }
   }
@@ -910,8 +959,9 @@ void keyPressed() {
       break;
       
     case 'G':
-      // Toggle fast mode
-      goFast = !goFast;
+      // Toggle gallery mode
+      galleryMode = !galleryMode;
+      println("Gallery mode: " + (galleryMode ? "ON" : "OFF"));
       break;
       
     case 'M':
