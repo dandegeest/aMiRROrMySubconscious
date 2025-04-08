@@ -142,9 +142,6 @@ boolean showStatusDisplay = true;
 PImage blendedBuffer = null;
 PImage processedImageBuffer = null;
 
-// Add this with other boolean state variables
-boolean randomPrompt = false;
-
 // Flipping the captured image before generating can give interesting results
 boolean flipImage = false;
 
@@ -178,7 +175,16 @@ boolean galleryMode = true;  // Gallery mode is on by default
 // Add this with other state variables
 float[] guidanceScaleValues = {1.0, 1.5, 2.0, 2.5, 3.0, 3.5};
 
-// Add this function before setup()
+// Add this with other state variables
+int autoCaptureTimeout = 30000;  // 30 seconds default
+
+// Add this with other state variables
+float pulsePhase = 0;
+float pulseSpeed = 0.1;  // Speed of the pulse animation
+
+// Add this with other state variables
+boolean isFullscreen = false;
+
 PImage flipImageVertically(PImage source) {
   source.loadPixels();
   PImage flipped = createImage(source.width, source.height, RGB);
@@ -301,9 +307,28 @@ void draw() {
   if (requestInProgress) {
     pushStyle();
     noStroke();
-    fill(255, 0, 0, 255);  // Solid red color
-    circle(width - 50, 50, 50);  // Larger circle in upper right corner
+    
+    // Draw multiple concentric circles with varying opacities
+    float baseOpacity = 255 * (0.5 + 0.5 * sin(pulsePhase));
+    float centerX = width - 50;
+    float centerY = 50;
+    
+    // Outer circle (largest)
+    fill(255, 0, 0, baseOpacity * 0.3);
+    circle(centerX, centerY, 60);
+    
+    // Middle circle
+    fill(255, 0, 0, baseOpacity * 0.6);
+    circle(centerX, centerY, 40);
+    
+    // Inner circle (smallest)
+    fill(255, 0, 0, baseOpacity);
+    circle(centerX, centerY, 20);
+    
     popStyle();
+    
+    // Update pulse phase
+    pulsePhase += pulseSpeed;
   }
 }
 
@@ -317,11 +342,9 @@ void drawCaptureTimer() {
       float randomStrength = random(0.5, 0.75);
       boolean randomFlip = random(1) > 0.5;
       float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
-      flipImage = randomFlip;
-      guidanceScale = randomGuidance;
-      captureAndProcess(randomModel, randomPrompt, randomStrength);
+      captureAndProcess(randomModel, randomPrompt, randomStrength, randomFlip, randomGuidance);
     } else {
-      captureAndProcess();
+      captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
     }
   }
   
@@ -360,36 +383,24 @@ void drawCaptureMotion() {
       float randomStrength = random(0.5, 0.75);
       boolean randomFlip = random(1) > 0.5;
       float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
-      flipImage = randomFlip;
-      guidanceScale = randomGuidance;
-      captureAndProcess(randomModel, randomPrompt, randomStrength);
+      captureAndProcess(randomModel, randomPrompt, randomStrength, randomFlip, randomGuidance);
     } else {
-      captureAndProcess(modelVersion, currentPrompt, promptStrength);
+      captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
     }
     motionDetected = true;
   } else if (currentMotion <= motionThreshold && !requestInProgress) {
     motionDetected = false;
   }
   
-  // Check for timeout (30 seconds) and auto-capture if needed
-  if (!requestInProgress && millis() - lastCaptureTime > 30000) {
-    println("No motion detected for 30 seconds, auto-capturing...");
-    if (galleryMode) {
-      // In gallery mode, use random settings
-      String randomModel = availableModels[int(random(availableModels.length))];
-      String randomPrompt = prompts[int(random(prompts.length))];
-      float randomStrength = random(0.5, 0.75);
-      boolean randomFlip = random(1) > 0.5;
-      float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
-      flipImage = randomFlip;
-      guidanceScale = randomGuidance;
-      captureAndProcess(randomModel, randomPrompt, randomStrength);
-    } else {
-      // Select a random two-word prompt
-      String randomPrompt = autoCapturePrompts[int(random(autoCapturePrompts.length))];
-      println("Using auto-capture prompt: " + randomPrompt);
-      captureAndProcess("condensation", randomPrompt, 0.9);
-    }
+  // Check for timeout and auto-capture if needed
+  if (!requestInProgress && millis() - lastCaptureTime > autoCaptureTimeout) {
+    println("No motion detected for " + (autoCaptureTimeout/1000) + " seconds, auto-capturing...");
+    // Always use auto-capture settings regardless of gallery mode
+    String randomPrompt = autoCapturePrompts[int(random(autoCapturePrompts.length))];
+    String formattedPrompt = "The word \"" + randomPrompt + "\" on a steamed over mirror";
+    float randomStrength = random(0.8, 0.95);
+    println("Using auto-capture prompt: " + formattedPrompt + " with strength: " + nf(randomStrength, 0, 2));
+    captureAndProcess("condensation", formattedPrompt, randomStrength, flipImage, guidanceScale);
   }
   
   // Update previous frame
@@ -594,10 +605,10 @@ void updateDisplay() {
 
 void captureAndProcess() {
   // Call the new version with current settings
-  captureAndProcess(modelVersion, currentPrompt, promptStrength);
+  captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
 }
 
-void captureAndProcess(String modelVersion, String prompt, float promptStrength) {
+void captureAndProcess(String modelVersion, String prompt, float promptStrength, boolean shouldFlip, float guidance) {
   if (currentCamImage == null) return;
   
   // Request garbage collection before starting a new capture cycle
@@ -612,16 +623,14 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   String outputFilename = outputDir + "/fofr_" + modelVersion + "_" + timestamp + ".png";
   
   // Flip the image vertically if enabled
-  PImage imageToProcess = flipImage ? flipImageVertically(currentCamImage) : currentCamImage;
+  PImage imageToProcess = shouldFlip ? flipImageVertically(currentCamImage) : currentCamImage;
   
   // Create the JSON payload for the request
   JSONObject json = new JSONObject();
   json.setString("model_version", modelVersion);
   
-  // Set the prompt based on random toggle and format it
-  String promptToUse = randomPrompt ? prompts[int(random(prompts.length))] : prompt;
-  String formattedPrompt = "The word \"" + promptToUse + "\" on a steamed over mirror";
-  json.setString("prompt", formattedPrompt);
+  // Set the prompt - no need to format it here as it's already formatted when needed
+  json.setString("prompt", prompt);
   
   // Send prompt strength as a float
   json.setFloat("prompt_strength", promptStrength);
@@ -638,7 +647,7 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   json.setInt("num_outputs", numOutputs);
   json.setString("aspect_ratio", aspectRatio);
   json.setString("output_format", outputFormat);
-  json.setFloat("guidance_scale", guidanceScale);
+  json.setFloat("guidance_scale", guidance);
   json.setInt("output_quality", outputQuality);
   json.setInt("num_inference_steps", numInferenceSteps);
   
@@ -646,7 +655,7 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength)
   Thread t = new Thread(new Runnable() {
     public void run() {
       try {
-        sendToFlaskServer(json.toString(), outputFilename);
+        sendToFlaskServer(json.toString(), outputFilename, shouldFlip);
       } catch (Exception e) {
         println("Error in request thread: " + e.getMessage());
         requestInProgress = false;  // Ensure flag is cleared on error
@@ -682,22 +691,21 @@ String encodeImageToBase64(PImage img) {
   }
 }
 
-void sendToFlaskServer(String jsonPayload, String outputFilename) {
+void sendToFlaskServer(String jsonPayload, String outputFilename, boolean shouldFlip) {
   try {
     // Parse the JSON to get just the prompt and prompt strength for logging
     JSONObject json = parseJSONObject(jsonPayload);
     String prompt = json.getString("prompt");
     float pStrength = json.getFloat("prompt_strength");
     String model = json.getString("model_version");
-    
+     
     // Create a copy of the JSON for logging without the image data
     JSONObject logJson = new JSONObject();
-    logJson.setString("model_version", model);
     logJson.setString("prompt", prompt);
+    logJson.setString("model_version", model);
     logJson.setFloat("prompt_strength", pStrength);
-    logJson.setBoolean("go_fast", json.getBoolean("go_fast"));
+    logJson.setBoolean("flip", shouldFlip);
     logJson.setFloat("lora_scale", json.getFloat("lora_scale"));
-    logJson.setInt("num_inference_steps", json.getInt("num_inference_steps"));
     
     // Print just the relevant parameters
     println("Sending request: " + logJson.toString());
@@ -720,8 +728,8 @@ void sendToFlaskServer(String jsonPayload, String outputFilename) {
       if (jsonResponse != null && jsonResponse.getBoolean("success")) {
         String outputUrl = jsonResponse.getString("output_url");
         
-        // Download the image using the passed filename
-        downloadImage(outputUrl, outputFilename);
+        // Download the image using the passed filename and flip parameter
+        downloadImage(outputUrl, outputFilename, shouldFlip);
         lastCaptureTime = millis(); // Make sure the image displays for 5 seconds if request took longer
       } else {
         println("Error in response: " + response.body());
@@ -739,7 +747,7 @@ void sendToFlaskServer(String jsonPayload, String outputFilename) {
   }
 }
 
-void downloadImage(String url, String outputFilename) {
+void downloadImage(String url, String outputFilename, boolean shouldFlip) {
   try {
     // Create HTTP request for the image
     HttpRequest request = HttpRequest.newBuilder()
@@ -771,7 +779,23 @@ void downloadImage(String url, String outputFilename) {
         
         if (newAIImage != null) {
           // Flip the image back to original orientation if enabled
-          PImage finalImage = flipImage ? flipImageVertically(newAIImage) : newAIImage;
+          PImage finalImage = shouldFlip ? flipImageVertically(newAIImage) : newAIImage;
+          
+          // If flip mode is on, save the flipped image back to disk
+          if (shouldFlip) {
+            // Convert PImage to BufferedImage
+            BufferedImage bimg = new BufferedImage(finalImage.width, finalImage.height, BufferedImage.TYPE_INT_RGB);
+            finalImage.loadPixels();
+            for (int y = 0; y < finalImage.height; y++) {
+              for (int x = 0; x < finalImage.width; x++) {
+                bimg.setRGB(x, y, finalImage.pixels[y * finalImage.width + x]);
+              }
+            }
+            
+            // Save the flipped image back to disk
+            ImageIO.write(bimg, "png", outputPath.toFile());
+            println("Saved flipped image to: " + outputPath);
+          }
           
           // Only after successfully loading the new image, update references
           synchronized(this) {
@@ -815,94 +839,61 @@ void displayStatus() {
   fill(0, 150);
   noStroke();
   
-  if (showSettings) {
-    // Show expanded settings panel in the upper left
-    rect(10, 10, 300, 550);  // Reduced height since we removed some items
-    
-    fill(255);
-    textSize(16);
-    text("aMiRROR - AI Subconscious Mirror", 20, 40);
-    textSize(14);
-    
-    // Main settings
-    text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 70);
-    text("Model: " + modelVersion + " (M to cycle)", 20, 90);
-    text("Random Prompt: " + (randomPrompt ? "ON" : "OFF") + " (R to toggle)", 20, 110);
-    text("Gallery Mode: " + (galleryMode ? "ON" : "OFF") + " (G to toggle)", 20, 130);
-    text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 150);
-    text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 170);
-    
-    // Camera settings
-    text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 190);
-    
-    // Generation settings
-    text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 210);
-    text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 230);
-    text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 250);
-    text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 270);
-    text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 290);
-    
-    // Status and motion settings
-    if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 310);
-      text("Current Motion: " + nf(currentMotion, 0, 3), 20, 330);
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 350);
-      if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 370);
-      } else {
-        text("MOTION", 20, 370);
-      }
-      text("Press TAB to hide settings", 20, 390);
-    } else {
-      text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 310);
-      if (requestInProgress) {
-        text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 330);
-      } else {
-        text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 330);
-      }
-      text("Press TAB to hide settings", 20, 350);
-    }
-    
-    // Show camera preview at 1/8 scale
-    if (currentCamImage != null) {
-      int previewX = (300 - currentCamImage.width/8) / 2 + 10;
-      int previewY = 400;  // Adjusted position after removing items
-      drawCameraPreview(previewX, previewY);
-    }
-  } else {
-    // Show minimal info in the upper left
-    rect(10, 10, 300, 350);
-    
-    fill(255);
-    textSize(14);
-    text("aMiRROR - AI Subconscious Mirror", 20, 30);
-    
-    // Show prompt and prompt strength
-    text("Prompt: " + (randomPrompt ? "RANDOM" : currentPrompt), 20, 50);
-    text("Strength: " + nf(promptStrength, 0, 2), 20, 70);
-    text("Model: " + modelVersion, 20, 90);
-    text("Mode: " + currentCaptureMode, 20, 110);
-    text("Gallery: " + (galleryMode ? "ON" : "OFF"), 20, 130);
-    text("Random: " + (randomPrompt ? "ON" : "OFF"), 20, 150);
-    text("Flip: " + (flipImage ? "ON" : "OFF"), 20, 170);
-    
-    // Add motion threshold to minimal display when in motion mode
-    if (currentCaptureMode == CaptureMode.CaptureMotion) {
-      text("Motion: " + nf(motionThreshold, 0, 2), 20, 190);
-    }
-    
+  // Show settings panel in the upper left
+  rect(10, 10, 300, height - 20);  // Use height - 20 to leave some margin at bottom
+  
+  fill(255);
+  textSize(16);
+  text("aMiRROR - AI Subconscious Mirror", 20, 40);
+  textSize(14);
+  
+  // Add display mode info
+  text("Display: " + (isFullscreen ? "Fullscreen" : "Windowed"), 20, 70);
+  
+  // Main settings
+  text("Prompt: " + currentPrompt, 20, 90);
+  text("Model: " + modelVersion + " (M to cycle)", 20, 110);
+  text("Gallery Mode: " + (galleryMode ? "ON" : "OFF") + " (G to toggle)", 20, 130);
+  text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 150);
+  text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 170);
+  
+  // Camera settings
+  text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 190);
+  
+  // Generation settings
+  text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 210);
+  text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 230);
+  text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 250);
+  text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 270);
+  text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 290);
+  
+  // Status and motion settings
+  if (currentCaptureMode == CaptureMode.CaptureMotion) {
+    text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 310);
+    text("Current Motion: " + nf(currentMotion, 0, 3), 20, 330);
+    text("Auto-capture: " + (autoCaptureTimeout/1000) + "s (</> to change)", 20, 350);
+    text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 210);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
     } else {
-      text(currentCaptureMode == CaptureMode.CaptureMotion ? "MOTION" : "Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 210);
+      text("MOTION", 20, 390);
     }
-    
-    // Show camera preview at 1/8 scale in minimal mode
-    if (currentCamImage != null) {
-      int previewX = (300 - currentCamImage.width/8) / 2 + 10;
-      int previewY = 230;
-      drawCameraPreview(previewX, previewY);
+    text("Press D to hide settings", 20, 410);
+  } else {
+    text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 310);
+    if (requestInProgress) {
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 330);
+    } else {
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 330);
     }
+    text("Press D to hide settings", 20, 350);
+  }
+  
+  // Show camera preview at 1/8 scale
+  if (currentCamImage != null) {
+    int previewX = (300 - currentCamImage.width/8) / 2 + 10;
+    int previewY = 450;  // Moved down to prevent overlap
+    drawCameraPreview(previewX, previewY);
   }
 }
 
@@ -933,7 +924,7 @@ void keyPressed() {
   switch (ciKeyPressed) {
     case 'S':
       // Force a new capture
-      captureAndProcess(modelVersion, currentPrompt, promptStrength);
+      captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
       break;
       
     case 'P':
@@ -973,11 +964,6 @@ void keyPressed() {
       }
       break;
       
-    case 'R':
-      // Toggle random prompt mode
-      randomPrompt = !randomPrompt;
-      break;
-      
     case 'C':
       switchCaptureMode();
       break;
@@ -1006,16 +992,30 @@ void keyPressed() {
       
     case '[':
     case '{':
-      adjustMotionThreshold(-0.01);
+      adjustMotionThreshold(-0.001);
       break;
       
     case ']':
     case '}':
-      adjustMotionThreshold(0.01);
+      adjustMotionThreshold(0.001);
       break;
       
     case '\t':  // TAB key
       showSettings = !showSettings;
+      break;
+      
+    case '<':
+    case ',':
+      // Decrease auto-capture timeout
+      autoCaptureTimeout = constrain(autoCaptureTimeout - 5000, 5000, 60000);
+      println("Auto-capture timeout: " + (autoCaptureTimeout/1000) + "s");
+      break;
+      
+    case '>':
+    case '.':
+      // Increase auto-capture timeout
+      autoCaptureTimeout = constrain(autoCaptureTimeout + 5000, 5000, 60000);
+      println("Auto-capture timeout: " + (autoCaptureTimeout/1000) + "s");
       break;
       
     default:
