@@ -290,7 +290,7 @@ void draw() {
   }
   
   // Display the current image
-  if (currentCamImage != null) {
+  if (currentCamImage != null && !isTransitioning) {
     image(currentCamImage, 0, 0, width, height);
     tint(255, 225);
   }
@@ -332,17 +332,26 @@ void draw() {
   }
 }
 
+void generateRandomSettings(String[] settings) {
+  settings[0] = availableModels[int(random(availableModels.length))];  // model
+  settings[1] = prompts[int(random(prompts.length))];  // prompt
+  settings[2] = str(constrain(promptStrength + random(-0.05, 0.05), 0, 1));  // strength
+  settings[3] = str(random(1) > 0.5);  // flip
+  settings[4] = str(guidanceScaleValues[int(random(guidanceScaleValues.length))]);  // guidance
+}
+
+// Add this function before the drawCaptureTimer function
+void handleGalleryCapture() {
+  String[] randomSettings = new String[5];
+  generateRandomSettings(randomSettings);
+  captureAndProcess(randomSettings[0], randomSettings[1], float(randomSettings[2]), boolean(randomSettings[3]), float(randomSettings[4]));
+}
+
 void drawCaptureTimer() {
   // Check if it's time for a new capture
   if (!requestInProgress && millis() - lastCaptureTime > captureInterval) {
     if (galleryMode) {
-      // In gallery mode, use random settings
-      String randomModel = availableModels[int(random(availableModels.length))];
-      String randomPrompt = prompts[int(random(prompts.length))];
-      float randomStrength = constrain(promptStrength + random(-0.05, 0.05), 0, 1);
-      boolean randomFlip = random(1) > 0.5;
-      float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
-      captureAndProcess(randomModel, randomPrompt, randomStrength, randomFlip, randomGuidance);
+      handleGalleryCapture();
     } else {
       captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
     }
@@ -377,13 +386,7 @@ void drawCaptureMotion() {
   if (currentMotion > motionThreshold && !requestInProgress && !motionDetected) {
     println("Motion detected: " + nf(currentMotion, 0, 3));
     if (galleryMode) {
-      // In gallery mode, use random settings
-      String randomModel = availableModels[int(random(availableModels.length))];
-      String randomPrompt = prompts[int(random(prompts.length))];
-      float randomStrength = constrain(promptStrength + random(-0.05, 0.05), 0, 1);
-      boolean randomFlip = random(1) > 0.5;
-      float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
-      captureAndProcess(randomModel, randomPrompt, randomStrength, randomFlip, randomGuidance);
+      handleGalleryCapture();
     } else {
       captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
     }
