@@ -233,7 +233,7 @@ void switchCaptureMode() {
 
 void setup() {
   // Set up the display in landscape mode
-  size(1280, 720);
+  size(1280, 720, P2D);
   frameRate(30);
   
   // Initialize output directory only
@@ -339,7 +339,7 @@ void drawCaptureTimer() {
       // In gallery mode, use random settings
       String randomModel = availableModels[int(random(availableModels.length))];
       String randomPrompt = prompts[int(random(prompts.length))];
-      float randomStrength = random(0.5, 0.75);
+      float randomStrength = constrain(promptStrength + random(-0.05, 0.05), 0, 1);
       boolean randomFlip = random(1) > 0.5;
       float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
       captureAndProcess(randomModel, randomPrompt, randomStrength, randomFlip, randomGuidance);
@@ -380,7 +380,7 @@ void drawCaptureMotion() {
       // In gallery mode, use random settings
       String randomModel = availableModels[int(random(availableModels.length))];
       String randomPrompt = prompts[int(random(prompts.length))];
-      float randomStrength = random(0.5, 0.75);
+      float randomStrength = constrain(promptStrength + random(-0.05, 0.05), 0, 1);
       boolean randomFlip = random(1) > 0.5;
       float randomGuidance = guidanceScaleValues[int(random(guidanceScaleValues.length))];
       captureAndProcess(randomModel, randomPrompt, randomStrength, randomFlip, randomGuidance);
@@ -863,7 +863,9 @@ void displayStatus() {
   // Generation settings
   text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 210);
   text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 230);
+  fill(255, 0, 0);
   text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 250);
+  fill(255);
   text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 270);
   text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 290);
   
@@ -872,7 +874,9 @@ void displayStatus() {
     text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 310);
     text("Current Motion: " + nf(currentMotion, 0, 3), 20, 330);
     text("Auto-capture: " + (autoCaptureTimeout/1000) + "s (</> to change)", 20, 350);
+    fill(0, 255, 0);
     text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
+    fill(255);
     if (requestInProgress) {
       text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
     } else {
