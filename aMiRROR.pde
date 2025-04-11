@@ -64,7 +64,6 @@ float guidanceScale = 3;  // Match server default
 int outputQuality = 80;  // Match server default
 float promptStrength = 0.7;  // Match server default
 int numInferenceSteps = 4;  // Match server default
-boolean showSettings = false;
 
 // List of prompts to cycle through
 String[] prompts = {
@@ -135,55 +134,35 @@ String[] autoCapturePrompts = {
   "Transcendence"
 };
 
-// Add this variable with the other boolean state variables (around line 43-44)
-boolean showStatusDisplay = true;
-
-// Add these variables at the beginning near other image variables
+boolean showStatusDisplay = false;
 PImage blendedBuffer = null;
 PImage processedImageBuffer = null;
 
 // Flipping the captured image before generating can give interesting results
 boolean flipImage = false;
 
-// Add this near the top with other state variables
 enum CaptureMode {
   CaptureTimer,
   CaptureMotion
 }
-
-// Add this with other state variables
 CaptureMode currentCaptureMode = CaptureMode.CaptureMotion;
 
-// Add these with other state variables
 float motionThreshold = 0.03;  // Adjusted for 4x4 pixel sampling (was 0.02)
 PImage previousFrame = null;  // Store the previous frame for motion detection
 boolean motionDetected = false;  // Flag to prevent multiple captures from same motion event
 
-// Add this with other state variables
 float currentMotion = 0;  // Store the current motion value
-
-// Add these variables at the top with other state variables
 float lastFrameTime = 0;
 float targetFrameTime = 1000.0f / 30.0f; // 30 FPS target
-boolean skipFrame = false;
 float cachedAspectRatio1 = 0;
 float cachedAspectRatio2 = 0;
 
-// Add this with other boolean state variables
 boolean galleryMode = true;  // Gallery mode is on by default
-
-// Add this with other state variables
 float[] guidanceScaleValues = {1.0, 1.5, 2.0, 2.5, 3.0, 3.5};
-
-// Add this with other state variables
 int autoCaptureTimeout = 30000;  // 30 seconds default
 
-// Add this with other state variables
 float pulsePhase = 0;
 float pulseSpeed = 0.1;  // Speed of the pulse animation
-
-// Add this with other state variables
-boolean isFullscreen = false;
 
 PImage flipImageVertically(PImage source) {
   source.loadPixels();
@@ -232,8 +211,9 @@ void switchCaptureMode() {
 }
 
 void setup() {
-  // Set up the display in landscape mode
+  // Set up the display in landscape mode, the camera will be flipped to take portrait image
   size(1280, 720, P2D);
+  fullScreen(P2D, 2);
   frameRate(30);
   
   // Initialize output directory only
@@ -273,7 +253,9 @@ void draw() {
     
     // Process the camera image
     PImage processedImage = processImage(cam);
-    currentCamImage = processedImage;
+    if (processedImage != null) {  // Only update if we got a valid frame
+      currentCamImage = processedImage;
+    }
     
     // Display camera image or AI image with transition
     updateDisplay();
@@ -300,17 +282,18 @@ void draw() {
     image(displayImage, 0, 0, width, height);
   }
   
-  // Display status information
-  displayStatus();
-  
-  // Draw capture indicator if generation is in progress - always draw last
+  displayStatus();  
+  drawIndicator();
+}
+
+void drawIndicator() {
   if (requestInProgress) {
     pushStyle();
     noStroke();
     
     // Draw multiple concentric circles with varying opacities
     float baseOpacity = 255 * (0.5 + 0.5 * sin(pulsePhase));
-    float centerX = width - 50;
+    float centerX = 50;
     float centerY = 50;
     
     // Outer circle (largest)
@@ -490,9 +473,7 @@ PImage processImage(Capture camImage) {
   // Skip frame if we're falling behind
   float currentTime = millis();
   if (currentTime - lastFrameTime < targetFrameTime) {
-    skipFrame = true;
-  } else {
-    skipFrame = false;
+    return null;  // Skip this frame
   }
   lastFrameTime = currentTime;
   
@@ -850,50 +831,47 @@ void displayStatus() {
   text("aMiRROR - AI Subconscious Mirror", 20, 40);
   textSize(14);
   
-  // Add display mode info
-  text("Display: " + (isFullscreen ? "Fullscreen" : "Windowed"), 20, 70);
-  
   // Main settings
-  text("Prompt: " + currentPrompt, 20, 90);
-  text("Model: " + modelVersion + " (M to cycle)", 20, 110);
-  text("Gallery Mode: " + (galleryMode ? "ON" : "OFF") + " (G to toggle)", 20, 130);
-  text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 150);
-  text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 170);
+  text("Prompt: " + currentPrompt, 20, 70);
+  text("Model: " + modelVersion + " (M to cycle)", 20, 90);
+  text("Gallery Mode: " + (galleryMode ? "ON" : "OFF") + " (G to toggle)", 20, 110);
+  text("Capture Mode: " + currentCaptureMode + " (C to cycle)", 20, 130);
+  text("Flip Image: " + (flipImage ? "ON" : "OFF") + " (F to toggle)", 20, 150);
   
   // Camera settings
-  text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 190);
+  text("Camera: " + cam.width + "x" + cam.height + " → " + displayWidth + "x" + displayHeight, 20, 170);
   
   // Generation settings
-  text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 210);
-  text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 230);
+  text("Steps: " + numInferenceSteps + " (↑/↓ to change)", 20, 190);
+  text("Guidance Scale: " + nf(guidanceScale, 0, 2) + " (←/→ to change)", 20, 210);
   fill(255, 0, 0);
-  text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 250);
+  text("Prompt Strength: " + nf(promptStrength, 0, 2) + " (+/- to change)", 20, 230);
   fill(255);
-  text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 270);
-  text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 290);
+  text("Fast Mode: " + (goFast ? "ON" : "OFF") + " (G to toggle)", 20, 250);
+  text("Lora Scale: " + nf(loraScale, 0, 1) + " (L/K to change)", 20, 270);
   
   // Status and motion settings
   if (currentCaptureMode == CaptureMode.CaptureMotion) {
-    text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 310);
-    text("Current Motion: " + nf(currentMotion, 0, 3), 20, 330);
-    text("Auto-capture: " + (autoCaptureTimeout/1000) + "s (</> to change)", 20, 350);
+    text("Motion Threshold: " + nf(motionThreshold, 0, 3) + " ([/] to change)", 20, 290);
+    text("Current Motion: " + nf(currentMotion, 0, 3), 20, 310);
+    text("Auto-capture: " + (autoCaptureTimeout/1000) + "s (</> to change)", 20, 330);
     fill(0, 255, 0);
-    text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 370);
+    text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 350);
     fill(255);
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 390);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 370);
     } else {
-      text("MOTION", 20, 390);
+      text("MOTION", 20, 370);
     }
-    text("Press D to hide settings", 20, 410);
+    text("Press D to hide settings", 20, 390);
   } else {
-    text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 310);
+    text("Framerate: " + nf(frameRate, 0, 1) + " fps", 20, 290);
     if (requestInProgress) {
-      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 330);
+      text("Generating... " + ((millis() - requestStartTime) / 1000) + "s", 20, 310);
     } else {
-      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 330);
+      text("Next capture in " + ((captureInterval - (millis() - lastCaptureTime)) / 1000) + "s", 20, 310);
     }
-    text("Press D to hide settings", 20, 350);
+    text("Press D to hide settings", 20, 330);
   }
   
   // Show camera preview at 1/8 scale
@@ -1005,10 +983,6 @@ void keyPressed() {
     case ']':
     case '}':
       adjustMotionThreshold(0.001);
-      break;
-      
-    case '\t':  // TAB key
-      showSettings = !showSettings;
       break;
       
     case '<':
