@@ -145,6 +145,18 @@ enum CaptureMode {
   CaptureTimer,
   CaptureMotion
 }
+
+// Add this with other state variables
+enum CaptureType {
+  Timed,
+  Motion,
+  Auto
+}
+
+// Add this with other state variables
+CaptureType lastCaptureType = CaptureType.Timed;  // Track the type of the most recent capture
+
+// Add this with other state variables
 CaptureMode currentCaptureMode = CaptureMode.CaptureMotion;
 
 float motionThreshold = 0.03;  // Adjusted for 4x4 pixel sampling (was 0.02)
@@ -334,8 +346,10 @@ void drawCaptureTimer() {
   // Check if it's time for a new capture
   if (!requestInProgress && millis() - lastCaptureTime > captureInterval) {
     if (galleryMode) {
+      lastCaptureType = CaptureType.Timed;
       handleGalleryCapture();
     } else {
+      lastCaptureType = CaptureType.Timed;
       captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
     }
   }
@@ -368,9 +382,19 @@ void drawCaptureMotion() {
   // Check if motion exceeds threshold and we're not already processing
   if (currentMotion > motionThreshold && !requestInProgress && !motionDetected) {
     println("Motion detected: " + nf(currentMotion, 0, 3));
+    
+    // If the last capture was an auto-capture, clear the display image
+    if (lastCaptureType == CaptureType.Auto) {
+      displayImage = null;
+      isTransitioning = false;
+      transitionAlpha = 0;
+    }
+    
     if (galleryMode) {
+      lastCaptureType = CaptureType.Motion;
       handleGalleryCapture();
     } else {
+      lastCaptureType = CaptureType.Motion;
       captureAndProcess(modelVersion, currentPrompt, promptStrength, flipImage, guidanceScale);
     }
     motionDetected = true;
@@ -386,6 +410,7 @@ void drawCaptureMotion() {
     String formattedPrompt = "The word \"" + randomPrompt + "\" on a steamed over mirror";
     float randomStrength = random(0.8, 0.95);
     println("Using auto-capture prompt: " + formattedPrompt + " with strength: " + nf(randomStrength, 0, 2));
+    lastCaptureType = CaptureType.Auto;
     captureAndProcess("condensation", formattedPrompt, randomStrength, flipImage, guidanceScale);
   }
   
