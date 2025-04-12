@@ -46,7 +46,7 @@ DEFAULT_PARAMS = {
     "model_version": "mysubconscious",
     "width": 1280,
     "height": 720,
-    "prompt": "a mirror or",
+    "prompt": "a mirror or my subconscious",
     "go_fast": True,
     "lora_scale": 1,
     "megapixels": "1",
@@ -66,9 +66,9 @@ MODEL_VERSIONS = {
         "version_id": "de1b628b969c5c1c31c9cad1916eb74a4dfbaed6e1612f61a0e6af45718cecd9",
         "trigger": "MY_SUBCONSCIOUS"
     },
-    "klingon": {
-        "version_id": "4cff954216285e54af8831b40d19cadd696e849f3d6840de59a77add698775eb",
-        "trigger": "KLINGON"
+    "nobel": {
+        "version_id": "59bb08ad52de964441a75b8c6e36955cde3d00e4789dc131b2cb5c357239e310",
+        "trigger": "NOBEL24"
     },
     "neo-impressionism": {
         "version_id": "7cbedb5821207721873a5dcf248a5d8fe232214e32e5b6b94c4206c218be631e",
