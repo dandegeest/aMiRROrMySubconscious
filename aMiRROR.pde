@@ -629,7 +629,7 @@ void captureAndProcess(String modelVersion, String prompt, float promptStrength,
   
   // Generate timestamp for output file only
   String timestamp = getCurrentTimestamp();
-  String outputFilename = outputDir + "/fofr_" + modelVersion + "_" + timestamp + ".png";
+  String outputFilename = outputDir + "/" + modelVersion + "_" + timestamp + "_" + nf(promptStrength, 0, 2) + "_" + nf(guidance, 0, 2) + ".png";
   
   // Flip the image vertically if enabled
   PImage imageToProcess = shouldFlip ? flipImageVertically(currentCamImage) : currentCamImage;
