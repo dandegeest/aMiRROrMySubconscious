@@ -176,6 +176,13 @@ int autoCaptureTimeout = 30000;  // 30 seconds default
 float pulsePhase = 0;
 float pulseSpeed = 0.1;  // Speed of the pulse animation
 
+//Scanline FX
+int scanH = 5;
+int scanY = scanH / 2;
+
+//Glitch FX
+int glitchCnt = 0;
+
 PImage flipImageVertically(PImage source) {
   source.loadPixels();
   PImage flipped = createImage(source.width, source.height, RGB);
@@ -224,8 +231,8 @@ void switchCaptureMode() {
 
 void setup() {
   // Set up the display in landscape mode, the camera will be flipped to take portrait image
-  size(1280, 720, P2D);
-  fullScreen(P2D, 2);
+  size(1280, 720);
+  //fullScreen(P2D, 2);
   frameRate(30);
   
   // Initialize output directory only
@@ -284,18 +291,44 @@ void draw() {
   }
   
   // Display the current image
-  if (currentCamImage != null && !isTransitioning) {
-    image(currentCamImage, 0, 0, width, height);
-    tint(255, 225);
-  }
-  else noTint();
+  //if (currentCamImage != null && !isTransitioning) {
+  //  image(currentCamImage, 0, 0, width, height);
+  //  tint(255, 225);
+  //}
+  //else noTint();
   
   if (displayImage != null) {
     image(displayImage, 0, 0, width, height);
   }
   
+  //drawScanner();
+  if (frameCount % 30 == 0) glitchCnt = (int)random(0, 15);
+  glitch();
   displayStatus();  
   drawIndicator();
+}
+
+void glitch() {
+  if (currentCamImage == null || currentAIImage == null || glitchCnt == 0)
+    return;
+  
+  glitchCnt--;
+  tint(250, 180);
+  image(currentCamImage, 5, 5);
+  noTint();
+}
+
+void drawScanner() {
+  if (displayImage == null)
+    return;
+    
+  blend(displayImage,
+    0, 0, displayImage.width, scanH * 2,
+    0, scanY - scanH, displayImage.width, scanH * 2, DODGE );
+ 
+  if (frameCount % 15 == 0)
+    scanY += scanH;
+  if (scanY > displayImage.height) scanY = scanH;
 }
 
 void drawIndicator() {
@@ -382,6 +415,8 @@ void drawCaptureMotion() {
   // Check if motion exceeds threshold and we're not already processing
   if (currentMotion > motionThreshold && !requestInProgress && !motionDetected) {
     println("Motion detected: " + nf(currentMotion, 0, 3));
+    
+    currentAIImage = null;  
     
     // If the last capture was an auto-capture, clear the display image
     if (lastCaptureType == CaptureType.Auto) {
