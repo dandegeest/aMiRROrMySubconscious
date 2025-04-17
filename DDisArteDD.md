@@ -8,9 +8,9 @@ aMiRRoR is an interactive art installation that redefines the concept of reflect
 
 ## Concept
 
-At its core, aMiRRoR challenges the boundaries between reality, perception, and identity. Instead of a static, unfiltered reflection, users are presented with a dynamic and evolving version of themselves—one shaped by artificial intelligence, generative algorithms, and artistic interpretation. By integrating real-time AI tools such as Stable Diffusion and RunwayML, aMiRRoR offers unique, unpredictable visual transformations, shifting between surreal, abstract, and hyperreal aesthetics.
+At its core, aMiRRoR challenges the boundaries between reality, perception, and identity. Instead of a static, unfiltered reflection, users are presented with a dynamic and evolving version of themselves—one shaped by artificial intelligence, generative algorithms, and artistic interpretation. By integrating real-time AI image to image generation using fine-tuned Flux LoRa models with billions of parameters, aMiRRoR offers unique, unpredictable visual transformations, shifting between surreal, abstract, and hyperreal interpretaitons of the viewer.
 
-This project invites participants to question the nature of self-image and perception in an era of deep fakes, digital identity, and machine creativity. How do we recognize ourselves when our reflection is no longer fixed? What does it mean when an AI interprets us in real time? What does it see "when the mirror dreams of being you".
+This project invites participants to question the nature of self-image and perception in an era of deep fakes, digital identity, and machine creativity. How do we recognize ourselves when our reflection is no longer fixed? What does it mean when an AI interprets us in real time? What does it see "when the mirror dreams of being you"?
 
 Using found and repurposed materials in its construction, aMiRRoR also embodies the philosophy of DDisArteDD—turning discarded technology and objects into an immersive artistic experience. It blurs the line between art, technology, and identity, encouraging viewers to see themselves—and the world—through a transformed lens.
 
@@ -42,4 +42,4 @@ Using found and repurposed materials in its construction, aMiRRoR also embodies 
 <p></p>
 <p></p>
 
-<center>*"Transforming the discarded into the DDisArteDD"*</center>
+<center>"Transforming the discarded into the DDisArteDD"</center>
