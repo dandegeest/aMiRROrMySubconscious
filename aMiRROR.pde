@@ -232,7 +232,7 @@ void switchCaptureMode() {
 void setup() {
   // Set up the display in landscape mode, the camera will be flipped to take portrait image
   size(1280, 720);
-  //fullScreen(P2D, 2);
+  fullScreen(2);
   frameRate(30);
   
   // Initialize output directory only
@@ -313,8 +313,8 @@ void glitch() {
     return;
   
   glitchCnt--;
-  tint(250, 180);
-  image(currentCamImage, 5, 5);
+  tint(250, 100);
+  image(currentCamImage, 0, 0);
   noTint();
 }
 
