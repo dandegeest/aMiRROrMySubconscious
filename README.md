@@ -57,7 +57,7 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
 - Motion detection for automatic capture
 - Multiple AI model support
   - [My Subconscious](https://replicate.com/fofr/flux-my-subconscious)
-  - [Klingon](https://replicate.com/fofr/flux-klingon)
+  - [Nobel](https://replicate.com/fofr/flux-nobel)
   - [Neo-Impressionism](https://replicate.com/fofr/flux-neo-impressionism)
   - [Condensation](https://replicate.com/fofr/flux-condensation)
   - [Weird](https://replicate.com/fofr/flux-weird)
