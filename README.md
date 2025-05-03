@@ -39,6 +39,18 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
   <img src="images/aimirror2.png" alt="AI Generated Image 3" width="49.5%"/>
 </div>
 
+## Example Gallery
+
+| | | | | | |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| ![Example 1](examples/fofr_20250329_160804.png) | ![Example 2](examples/fofr_20250329_160759.png) | ![Example 3](examples/fofr_20250329_160755.png) | ![Example 4](examples/fofr_20250329_160749.png) | ![Example 5](examples/fofr_20250329_160744.png) | ![Example 6](examples/fofr_20250329_160719.png) |
+| ![Example 7](examples/fofr_20250329_160715.png) | ![Example 8](examples/fofr_20250329_160709.png) | ![Example 9](examples/fofr_20250329_160704.png) | ![Example 10](examples/fofr_20250329_160702.png) | ![Example 11](examples/fofr_20250329_160650.png) | ![Example 12](examples/fofr_20250329_160644.png) |
+| ![Example 13](examples/fofr_20250329_160640.png) | ![Example 14](examples/fofr_20250329_160634.png) | ![Example 15](examples/fofr_20250329_160629.png) | ![Example 16](examples/fofr_20250329_160447.png) | ![Example 17](examples/fofr_20250329_160441.png) | ![Example 18](examples/fofr_20250329_160435.png) |
+| ![Example 19](examples/fofr_20250329_160431.png) | ![Example 20](examples/fofr_20250329_160425.png) | ![Example 21](examples/fofr_20250329_160421.png) | ![Example 22](examples/fofr_20250329_160415.png) | ![Example 23](examples/fofr_20250329_160411.png) | ![Example 24](examples/fofr_20250329_160207.png) |
+| ![Example 25](examples/fofr_20250329_160202.png) | ![Example 26](examples/fofr_20250329_160157.png) | ![Example 27](examples/fofr_20250329_160153.png) | ![Example 28](examples/fofr_20250329_160147.png) | ![Example 29](examples/fofr_20250329_160142.png) | ![Example 30](examples/fofr_20250329_160137.png) |
+| ![Example 31](examples/fofr_20250329_160119.png) | ![Example 32](examples/fofr_20250329_160006.png) | ![Example 33](examples/fofr_20250329_155915.png) | ![Example 34](examples/fofr_20250329_155910.png) | ![Example 35](examples/fofr_20250329_155905.png) | ![Example 36](examples/fofr_20250329_155850.png) |
+| ![Example 37](examples/fofr_20250329_155840.png) | ![Example 38](examples/fofr_20250329_155835.png) | ![Example 39](examples/fofr_20250329_155830.png) | ![Example 40](examples/fofr_20250329_155826.png) | | |
+
 ## Features
 
 - Real-time webcam capture
