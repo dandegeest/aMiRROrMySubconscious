@@ -30,6 +30,11 @@ Using found and repurposed materials in its construction, aMiRRoR also embodies 
 | ![Documentation Image 5](images/document5.png) | ![Documentation Image 6](images/document6.png) |
 | ![Documentation Image 7](images/document7.png) | ![Documentation Image 9](images/document9.png) |
 | ![Documentation Image 8](images/document8.png) | ![Documentation Image 10](images/document10.png) |
+| ![Documentation Image 11](images/document11.png) | ![Documentation Image 12](images/document12.png) |
+| ![Documentation Image 13](images/document13.png) | ![Documentation Image 14](images/document14.png) |
+| ![Documentation Image 15](images/document15.png) | ![Documentation Image 16](images/document16.png) |
+| ![Documentation Image 17](images/document17.png) | ![Documentation Image 18](images/document18.png) |
+| ![Documentation Image 19](images/document19.png) | |
 
 ## About DDisArteDD
 
