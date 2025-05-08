@@ -4,7 +4,7 @@
 
 ## Project Statement
 
-aMiRRoR is an interactive art installation that redefines the concept of reflection. Using real-time AI image processing, aMiRRoR captures a viewer's image and transforms it before displaying an altered version back on an LCD screen—turning a traditional mirror into a portal of self-exploration.
+aMiRRoR is an interactive art installation that redefines the concept of reflection. Using real-time AI image processing, aMiRRoR captures a viewer's image and transforms it before displaying an altered version back on an LCD screen—turning a traditional mirror into a portal of self-exploration. See images from the [exhibition in the Beckham Forum](https://photos.google.com/share/AF1QipNUr9BYpaATZitNYJko89mUyurav565MYMcF1k2PxpekZvOGj6pMhTUbeYuwGPBAg?pli=1&key=OWtQMmFweTBBUlpzaW4wQWFfb08wR0oxTWZHSk93) at Iowa State University.
 
 ## Concept
 
