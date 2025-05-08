@@ -31,59 +31,6 @@ If you need to update Java, download the latest JDK from [Oracle](https://www.or
 
 After installing the Video library and ensuring you have Java 11+, restart Processing and open the aMiRROR.pde sketch.
 
-## Test Outputs
-
-<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
-  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1" style="width: 100%;"/>
-  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-    <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 100%;"/>
-    <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 100%;"/>
-  </div>
-</div>
-
-<div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 20px;">
-  <img src="examples/fofr_20250329_160804.png" alt="Example 1" style="width: 100%;">
-  <img src="examples/fofr_20250329_160759.png" alt="Example 2" style="width: 100%;">
-  <img src="examples/fofr_20250329_160755.png" alt="Example 3" style="width: 100%;">
-  <img src="examples/fofr_20250329_160749.png" alt="Example 4" style="width: 100%;">
-  <img src="examples/fofr_20250329_160744.png" alt="Example 5" style="width: 100%;">
-  <img src="examples/fofr_20250329_160719.png" alt="Example 6" style="width: 100%;">
-  <img src="examples/fofr_20250329_160715.png" alt="Example 7" style="width: 100%;">
-  <img src="examples/fofr_20250329_160709.png" alt="Example 8" style="width: 100%;">
-  <img src="examples/fofr_20250329_160704.png" alt="Example 9" style="width: 100%;">
-  <img src="examples/fofr_20250329_160702.png" alt="Example 10" style="width: 100%;">
-  <img src="examples/fofr_20250329_160650.png" alt="Example 11" style="width: 100%;">
-  <img src="examples/fofr_20250329_160644.png" alt="Example 12" style="width: 100%;">
-  <img src="examples/fofr_20250329_160640.png" alt="Example 13" style="width: 100%;">
-  <img src="examples/fofr_20250329_160634.png" alt="Example 14" style="width: 100%;">
-  <img src="examples/fofr_20250329_160629.png" alt="Example 15" style="width: 100%;">
-  <img src="examples/fofr_20250329_160447.png" alt="Example 16" style="width: 100%;">
-  <img src="examples/fofr_20250329_160441.png" alt="Example 17" style="width: 100%;">
-  <img src="examples/fofr_20250329_160435.png" alt="Example 18" style="width: 100%;">
-  <img src="examples/fofr_20250329_160431.png" alt="Example 19" style="width: 100%;">
-  <img src="examples/fofr_20250329_160425.png" alt="Example 20" style="width: 100%;">
-  <img src="examples/fofr_20250329_160421.png" alt="Example 21" style="width: 100%;">
-  <img src="examples/fofr_20250329_160415.png" alt="Example 22" style="width: 100%;">
-  <img src="examples/fofr_20250329_160411.png" alt="Example 23" style="width: 100%;">
-  <img src="examples/fofr_20250329_160207.png" alt="Example 24" style="width: 100%;">
-  <img src="examples/fofr_20250329_160202.png" alt="Example 25" style="width: 100%;">
-  <img src="examples/fofr_20250329_160157.png" alt="Example 26" style="width: 100%;">
-  <img src="examples/fofr_20250329_160153.png" alt="Example 27" style="width: 100%;">
-  <img src="examples/fofr_20250329_160147.png" alt="Example 28" style="width: 100%;">
-  <img src="examples/fofr_20250329_160142.png" alt="Example 29" style="width: 100%;">
-  <img src="examples/fofr_20250329_160137.png" alt="Example 30" style="width: 100%;">
-  <img src="examples/fofr_20250329_160119.png" alt="Example 31" style="width: 100%;">
-  <img src="examples/fofr_20250329_160006.png" alt="Example 32" style="width: 100%;">
-  <img src="examples/fofr_20250329_155915.png" alt="Example 33" style="width: 100%;">
-  <img src="examples/fofr_20250329_155910.png" alt="Example 34" style="width: 100%;">
-  <img src="examples/fofr_20250329_155905.png" alt="Example 35" style="width: 100%;">
-  <img src="examples/fofr_20250329_155850.png" alt="Example 36" style="width: 100%;">
-  <img src="examples/fofr_20250329_155840.png" alt="Example 37" style="width: 100%;">
-  <img src="examples/fofr_20250329_155835.png" alt="Example 38" style="width: 100%;">
-  <img src="examples/fofr_20250329_155830.png" alt="Example 39" style="width: 100%;">
-  <img src="examples/fofr_20250329_155826.png" alt="Example 40" style="width: 100%;">
-</div>
-
 ## Features
 
 - Real-time webcam capture
@@ -173,3 +120,118 @@ The sketch requires a Flask server to communicate with the Replicate API.
 - `L`/`K`: Adjust lora scale
 
 ## Technical Details
+
+### Program Flow
+
+1. **Initialization**
+   - Load configuration from `config.json`
+   - Initialize webcam capture
+   - Set up UI elements and controls
+   - Connect to Flask server
+
+2. **Main Loop**
+   - Capture webcam frame
+   - Process motion detection
+   - Update UI elements
+   - Handle user input
+   - Manage state transitions
+
+   **Draw Loop Details:**
+   - **Frame Capture**
+     - Get current webcam frame
+     - Convert to grayscale for motion detection
+     - Store previous frame for comparison
+   
+   - **Motion Detection**
+     - Compare current and previous frames
+     - Calculate pixel differences
+     - Apply threshold to detect significant changes
+     - Trigger capture when motion exceeds threshold
+   
+   - **State Updates**
+     - Update camera/AI view toggle
+     - Process model switching
+     - Handle prompt cycling
+     - Update parameter values
+     - Manage fullscreen state
+   
+   - **UI Rendering**
+     - Draw webcam feed or AI output
+     - Update HUD elements
+     - Display status messages
+     - Show settings panel when active
+     - Render control indicators
+
+3. **Image Processing**
+   - Detect motion in webcam feed
+   - Capture frame when motion is detected
+   - Send image to Flask server
+   - Receive and display AI-generated image
+   - Save images to disk
+
+4. **State Management**
+   - Toggle between camera and AI view
+   - Cycle through different AI models
+   - Update prompt and parameters
+   - Handle fullscreen transitions
+   - Manage image saving
+
+5. **Error Handling**
+   - Webcam connection issues
+   - Server communication errors
+   - File system operations
+   - Invalid user input
+   - Resource cleanup
+
+## Test Outputs
+
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1" style="width: 100%;"/>
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+    <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 100%;"/>
+    <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 100%;"/>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 20px;">
+  <img src="examples/fofr_20250329_160804.png" alt="Example 1" style="width: 256px;">
+  <img src="examples/fofr_20250329_160759.png" alt="Example 2" style="width: 256px;">
+  <img src="examples/fofr_20250329_160755.png" alt="Example 3" style="width: 256px;">
+  <img src="examples/fofr_20250329_160749.png" alt="Example 4" style="width: 256px;">
+  <img src="examples/fofr_20250329_160744.png" alt="Example 5" style="width: 256px;">
+  <img src="examples/fofr_20250329_160719.png" alt="Example 6" style="width: 256px;">
+  <img src="examples/fofr_20250329_160715.png" alt="Example 7" style="width: 256px;">
+  <img src="examples/fofr_20250329_160709.png" alt="Example 8" style="width: 256px;">
+  <img src="examples/fofr_20250329_160704.png" alt="Example 9" style="width: 256px;">
+  <img src="examples/fofr_20250329_160702.png" alt="Example 10" style="width: 256px;">
+  <img src="examples/fofr_20250329_160650.png" alt="Example 11" style="width: 256px;">
+  <img src="examples/fofr_20250329_160644.png" alt="Example 12" style="width: 256px;">
+  <img src="examples/fofr_20250329_160640.png" alt="Example 13" style="width: 256px;">
+  <img src="examples/fofr_20250329_160634.png" alt="Example 14" style="width: 256px;">
+  <img src="examples/fofr_20250329_160629.png" alt="Example 15" style="width: 256px;">
+  <img src="examples/fofr_20250329_160447.png" alt="Example 16" style="width: 256px;">
+  <img src="examples/fofr_20250329_160441.png" alt="Example 17" style="width: 256px;">
+  <img src="examples/fofr_20250329_160435.png" alt="Example 18" style="width: 256px;">
+  <img src="examples/fofr_20250329_160431.png" alt="Example 19" style="width: 256px;">
+  <img src="examples/fofr_20250329_160425.png" alt="Example 20" style="width: 256px;">
+  <img src="examples/fofr_20250329_160421.png" alt="Example 21" style="width: 256px;">
+  <img src="examples/fofr_20250329_160415.png" alt="Example 22" style="width: 256px;">
+  <img src="examples/fofr_20250329_160411.png" alt="Example 23" style="width: 256px;">
+  <img src="examples/fofr_20250329_160207.png" alt="Example 24" style="width: 256px;">
+  <img src="examples/fofr_20250329_160202.png" alt="Example 25" style="width: 256px;">
+  <img src="examples/fofr_20250329_160157.png" alt="Example 26" style="width: 256px;">
+  <img src="examples/fofr_20250329_160153.png" alt="Example 27" style="width: 256px;">
+  <img src="examples/fofr_20250329_160147.png" alt="Example 28" style="width: 256px;">
+  <img src="examples/fofr_20250329_160142.png" alt="Example 29" style="width: 256px;">
+  <img src="examples/fofr_20250329_160137.png" alt="Example 30" style="width: 256px;">
+  <img src="examples/fofr_20250329_160119.png" alt="Example 31" style="width: 256px;">
+  <img src="examples/fofr_20250329_160006.png" alt="Example 32" style="width: 256px;">
+  <img src="examples/fofr_20250329_155915.png" alt="Example 33" style="width: 256px;">
+  <img src="examples/fofr_20250329_155910.png" alt="Example 34" style="width: 256px;">
+  <img src="examples/fofr_20250329_155905.png" alt="Example 35" style="width: 256px;">
+  <img src="examples/fofr_20250329_155850.png" alt="Example 36" style="width: 256px;">
+  <img src="examples/fofr_20250329_155840.png" alt="Example 37" style="width: 256px;">
+  <img src="examples/fofr_20250329_155835.png" alt="Example 38" style="width: 256px;">
+  <img src="examples/fofr_20250329_155830.png" alt="Example 39" style="width: 256px;">
+  <img src="examples/fofr_20250329_155826.png" alt="Example 40" style="width: 256px;">
+</div>
