@@ -224,11 +224,3 @@ curl -X POST http://localhost:5000/generate \
 ## License
 
 MIT License 
-
-## Concept Images and Ideation (ChatGPT)
-
-[Ideation was done using ChatGPT](docs/aMiRROR_%20An%20Interactive%20AI%20Mirror%20Experience.pdf) including concept images, ideas on technology stacks, and more.
-
-| | |
-|:---:|:---:|
-| ![Concept Image 1](docs/concept_image_1.png) | ![Concept Image 2](docs/concept_image_2.png) |
