@@ -39,8 +39,6 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
   <img src="images/aimirror2.png" alt="AI Generated Image 3" width="49.5%"/>
 </div>
 
-## Example Gallery
-
 | | | | | | |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | ![Example 1](examples/fofr_20250329_160804.png) | ![Example 2](examples/fofr_20250329_160759.png) | ![Example 3](examples/fofr_20250329_160755.png) | ![Example 4](examples/fofr_20250329_160749.png) | ![Example 5](examples/fofr_20250329_160744.png) | ![Example 6](examples/fofr_20250329_160719.png) |
