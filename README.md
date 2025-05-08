@@ -34,20 +34,55 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
 ## Test Outputs
 
 <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
-  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1""/>
-  <img src="images/aimirror1.png" alt="AI Generated Image 2" width="49.5%"/>
-  <img src="images/aimirror2.png" alt="AI Generated Image 3" width="49.5%"/>
+  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1" style="width: 100%; max-width: 800px;"/>
+  <div style="display: flex; gap: 20px; width: 100%;">
+    <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 50%;"/>
+    <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 50%;"/>
+  </div>
 </div>
 
-| | | | | | |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| ![Example 1](examples/fofr_20250329_160804.png) | ![Example 2](examples/fofr_20250329_160759.png) | ![Example 3](examples/fofr_20250329_160755.png) | ![Example 4](examples/fofr_20250329_160749.png) | ![Example 5](examples/fofr_20250329_160744.png) | ![Example 6](examples/fofr_20250329_160719.png) |
-| ![Example 7](examples/fofr_20250329_160715.png) | ![Example 8](examples/fofr_20250329_160709.png) | ![Example 9](examples/fofr_20250329_160704.png) | ![Example 10](examples/fofr_20250329_160702.png) | ![Example 11](examples/fofr_20250329_160650.png) | ![Example 12](examples/fofr_20250329_160644.png) |
-| ![Example 13](examples/fofr_20250329_160640.png) | ![Example 14](examples/fofr_20250329_160634.png) | ![Example 15](examples/fofr_20250329_160629.png) | ![Example 16](examples/fofr_20250329_160447.png) | ![Example 17](examples/fofr_20250329_160441.png) | ![Example 18](examples/fofr_20250329_160435.png) |
-| ![Example 19](examples/fofr_20250329_160431.png) | ![Example 20](examples/fofr_20250329_160425.png) | ![Example 21](examples/fofr_20250329_160421.png) | ![Example 22](examples/fofr_20250329_160415.png) | ![Example 23](examples/fofr_20250329_160411.png) | ![Example 24](examples/fofr_20250329_160207.png) |
-| ![Example 25](examples/fofr_20250329_160202.png) | ![Example 26](examples/fofr_20250329_160157.png) | ![Example 27](examples/fofr_20250329_160153.png) | ![Example 28](examples/fofr_20250329_160147.png) | ![Example 29](examples/fofr_20250329_160142.png) | ![Example 30](examples/fofr_20250329_160137.png) |
-| ![Example 31](examples/fofr_20250329_160119.png) | ![Example 32](examples/fofr_20250329_160006.png) | ![Example 33](examples/fofr_20250329_155915.png) | ![Example 34](examples/fofr_20250329_155910.png) | ![Example 35](examples/fofr_20250329_155905.png) | ![Example 36](examples/fofr_20250329_155850.png) |
-| ![Example 37](examples/fofr_20250329_155840.png) | ![Example 38](examples/fofr_20250329_155835.png) | ![Example 39](examples/fofr_20250329_155830.png) | ![Example 40](examples/fofr_20250329_155826.png) | | |
+<div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
+  <img src="examples/fofr_20250329_160804.png" alt="Example 1">
+  <img src="examples/fofr_20250329_160759.png" alt="Example 2">
+  <img src="examples/fofr_20250329_160755.png" alt="Example 3">
+  <img src="examples/fofr_20250329_160749.png" alt="Example 4">
+  <img src="examples/fofr_20250329_160744.png" alt="Example 5">
+  <img src="examples/fofr_20250329_160719.png" alt="Example 6">
+  <img src="examples/fofr_20250329_160715.png" alt="Example 7">
+  <img src="examples/fofr_20250329_160709.png" alt="Example 8">
+  <img src="examples/fofr_20250329_160704.png" alt="Example 9">
+  <img src="examples/fofr_20250329_160702.png" alt="Example 10">
+  <img src="examples/fofr_20250329_160650.png" alt="Example 11">
+  <img src="examples/fofr_20250329_160644.png" alt="Example 12">
+  <img src="examples/fofr_20250329_160640.png" alt="Example 13">
+  <img src="examples/fofr_20250329_160634.png" alt="Example 14">
+  <img src="examples/fofr_20250329_160629.png" alt="Example 15">
+  <img src="examples/fofr_20250329_160447.png" alt="Example 16">
+  <img src="examples/fofr_20250329_160441.png" alt="Example 17">
+  <img src="examples/fofr_20250329_160435.png" alt="Example 18">
+  <img src="examples/fofr_20250329_160431.png" alt="Example 19">
+  <img src="examples/fofr_20250329_160425.png" alt="Example 20">
+  <img src="examples/fofr_20250329_160421.png" alt="Example 21">
+  <img src="examples/fofr_20250329_160415.png" alt="Example 22">
+  <img src="examples/fofr_20250329_160411.png" alt="Example 23">
+  <img src="examples/fofr_20250329_160207.png" alt="Example 24">
+  <img src="examples/fofr_20250329_160202.png" alt="Example 25">
+  <img src="examples/fofr_20250329_160157.png" alt="Example 26">
+  <img src="examples/fofr_20250329_160153.png" alt="Example 27">
+  <img src="examples/fofr_20250329_160147.png" alt="Example 28">
+  <img src="examples/fofr_20250329_160142.png" alt="Example 29">
+  <img src="examples/fofr_20250329_160137.png" alt="Example 30">
+  <img src="examples/fofr_20250329_160119.png" alt="Example 31">
+  <img src="examples/fofr_20250329_160006.png" alt="Example 32">
+  <img src="examples/fofr_20250329_155915.png" alt="Example 33">
+  <img src="examples/fofr_20250329_155910.png" alt="Example 34">
+  <img src="examples/fofr_20250329_155905.png" alt="Example 35">
+  <img src="examples/fofr_20250329_155850.png" alt="Example 36">
+  <img src="examples/fofr_20250329_155840.png" alt="Example 37">
+  <img src="examples/fofr_20250329_155835.png" alt="Example 38">
+  <img src="examples/fofr_20250329_155830.png" alt="Example 39">
+  <img src="examples/fofr_20250329_155826.png" alt="Example 40">
+</div>
 
 ## Features
 
@@ -55,13 +90,29 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
 - Motion detection for automatic capture
 - Multiple AI model support
   - [My Subconscious](https://replicate.com/fofr/flux-my-subconscious)
-  - [Nobel](https://replicate.com/fofr/flux-nobel)
+  
+    <img src="images/mysubconscious.png" alt="My Subconscious Model Example" width="256"/>
+  - [Nobel](https://replicate.com/fofr/flux-nobel-prize-2024-sketch)
+  
+    <img src="images/nobel24.png" alt="Nobel Model Example" width="256"/>
   - [Neo-Impressionism](https://replicate.com/fofr/flux-neo-impressionism)
+  
+    <img src="images/neo.png" alt="Neo-Impressionism Model Example" width="256"/>
   - [Condensation](https://replicate.com/fofr/flux-condensation)
+  
+    <img src="images/condensation.png" alt="Condensation Model Example" width="256"/>
   - [Weird](https://replicate.com/fofr/flux-weird)
+  
+    <img src="images/weird.png" alt="Weird Model Example" width="256"/>
   - [Spitting Image](https://replicate.com/fofr/flux-spitting-image)
-  - [James Webb](https://replicate.com/fofr/sdxl-jwst)
-  - [Cyberpunk](https://replicate.com/fofr/flux-cyberpunk-typeface)
+  
+    <img src="images/spitting.png" alt="Spitting Image Model Example" width="256"/>
+  - [James Webb](https://replicate.com/fofr/flux-jwst)
+  
+    <img src="images/jwst.png" alt="James Webb Model Example" width="256"/>
+  - [Cyberpunk](https://replicate.com/fofr/flux-80s-cyberpunk)
+  
+    <img src="images/cyberpunk.png" alt="Cyberpunk Model Example" width="256"/>
 - Customizable prompts and parameters
 - Fullscreen mode support
 - Automatic image saving
@@ -102,6 +153,8 @@ The sketch requires a Flask server to communicate with the Replicate API.
 
 ## Controls
 
+![HUD Interface](images/HUD.png)
+
 - `SPACE`: Toggle between camera and AI view
 - `S`: Force a new capture
 - `P`: Cycle to next prompt
@@ -120,107 +173,3 @@ The sketch requires a Flask server to communicate with the Replicate API.
 - `L`/`K`: Adjust lora scale
 
 ## Technical Details
-
-### Processing Sketch
-
-The sketch uses:
-- Webcam capture for real-time video
-- Motion detection for automatic triggering
-- Base64 encoding for image transmission
-- Multi-threading for API communication
-- Memory-optimized image processing
-
-### Flask Server
-
-The server provides these endpoints:
-
-#### POST /generate
-Generate an image using the fofr/flux-my-subconscious model.
-
-**Request Body:**
-```json
-{
-  "prompt": "Your prompt text",
-  "width": 720,
-  "height": 1280,
-  "image": "base64_encoded_image"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "output_url": "https://replicate.delivery/..."
-}
-```
-
-#### GET /health
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "status": "healthy"
-}
-```
-
-## Program Flow
-
-The application operates in a continuous loop with three main phases:
-
-### 1. Capture Phase
-- The webcam continuously captures video frames
-- Motion detection analyzes frame differences
-- When significant motion is detected (or manual capture is triggered):
-  - The current frame is captured
-  - The image is preprocessed (resized, flipped if needed)
-  - The image is encoded to base64 for transmission
-
-### 2. Generation Phase
-- The captured image is sent to the Flask server
-- The server forwards the request to Replicate's API
-- The selected AI model processes the image with the current prompt and parameters
-- The generation runs asynchronously to prevent UI blocking
-- Progress updates are received and displayed
-
-### 3. Display Phase
-- The original webcam feed is shown in real-time
-- When a new AI-generated image is ready:
-  - The image is downloaded from Replicate
-  - The display switches to show the AI interpretation
-  - The image is saved to disk if auto-save is enabled
-- The cycle continues by monitoring for new motion in the webcam feed, triggering a new capture when significant movement is detected or when manually triggered
-- If no motion is detected for 30 seconds, the auto timeout feature activates, randomly selecting a word from a list of evocative terms (like "Reverie", "Fracture", "Mirage", "Doppelgänger", "Submerge", etc.) and using the "condensation" model to generate a new interpretation with the prompt "The word '[selected word]' on a steamed over mirror"
-
-The application maintains smooth performance by:
-- Using separate threads for API communication
-- Implementing frame skipping during generation
-- Caching generated images
-- Optimizing memory usage with proper image disposal
-
-## Example Usage
-
-Using curl:
-```bash
-curl -X POST http://localhost:5000/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "The words \"YOUR_PROMPT\" on a steamed over mirror",
-    "width": 720,
-    "height": 1280,
-    "image": "data:image/png;base64,..."
-  }'
-```
-
-## Requirements
-
-- Processing 4.x
-- Python 3.x
-- Webcam
-- Replicate API token
-- Internet connection
-
-## License
-
-MIT License 
