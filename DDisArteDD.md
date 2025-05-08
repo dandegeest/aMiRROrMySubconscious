@@ -14,7 +14,16 @@ This project invites participants to question the nature of self-image and perce
 
 Using found and repurposed materials in its construction, aMiRRoR also embodies the philosophy of DDisArteDD—turning discarded technology and objects into an immersive artistic experience. It blurs the line between art, technology, and identity, encouraging viewers to see themselves—and the world—through a transformed lens.
 
-## Concept Images
+## Artist Research
+[unStable Mirror](https://aid-lab.hfg-gmuend.de/articles/unstable-mirror/) by Christopher Pietsch
+
+[Uncanny Mirror](https://quasimondo.com/2020/08/29/uncanny-mirror/) by Mario Klingemann
+
+[Memories of Passersby I](https://quasimondo.com/2018/12/29/memories-of-passersby-i/) by Mario Klingemann
+
+## Concept Images and Ideation (ChatGPT)
+
+[Ideation was done using ChatGPT]() including concept images, ideas on technology stacks, and more.
 
 | | |
 |:---:|:---:|
