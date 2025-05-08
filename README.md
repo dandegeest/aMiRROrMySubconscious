@@ -107,10 +107,9 @@ The sketch requires a Flask server to communicate with the Replicate API.
 - `P`: Cycle to next prompt
 - `F`: Toggle image flipping
 - `M`: Cycle through available models
-- `R`: Toggle random prompt mode
+- `G`: Toggle gallery mode (random settings)
 - `C`: Switch capture mode (Timer/Motion)
 - `D`: Toggle status display visibility
-- `G`: Toggle fast mode
 - `TAB`: Toggle settings panel
 - `[`/`]`: Adjust motion threshold
 - `1-9`: Set prompt strength (0.1-0.9)
@@ -118,6 +117,20 @@ The sketch requires a Flask server to communicate with the Replicate API.
 - `UP`/`DOWN`: Adjust inference steps
 - `LEFT`/`RIGHT`: Adjust guidance scale
 - `L`/`K`: Adjust lora scale
+
+**Capture Modes:**
+- **Timer Mode**: Automatically captures every 5 seconds
+- **Motion Mode**: Captures when motion is detected
+  - Auto-captures after 30 seconds of no motion
+  - Uses random one-word prompts for auto-capture
+
+**Gallery Mode:**
+- When enabled (G key), uses random settings for each capture:
+  - Random model selection
+  - Random prompt from the prompt list
+  - Random prompt strength (±0.05 variation)
+  - Random image flipping
+  - Random guidance scale from predefined values
 
 ## Technical Details
 
@@ -185,12 +198,12 @@ The sketch requires a Flask server to communicate with the Replicate API.
 
 ## Test Outputs
 
-<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+<div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px;">
   <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1" style="width: 100%;"/>
-  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-    <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 100%;"/>
-    <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 100%;"/>
-  </div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+  <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 100%;"/>
+  <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 100%;"/>
 </div>
 
 <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 20px;">
