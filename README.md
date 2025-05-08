@@ -33,55 +33,55 @@ After installing the Video library and ensuring you have Java 11+, restart Proce
 
 ## Test Outputs
 
-<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
-  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1" style="width: 100%; max-width: 800px;"/>
-  <div style="display: flex; gap: 20px; width: 100%;">
-    <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 50%;"/>
-    <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 50%;"/>
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+  <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1" style="width: 100%;"/>
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+    <img src="images/aimirror1.png" alt="AI Generated Image 2" style="width: 100%;"/>
+    <img src="images/aimirror2.png" alt="AI Generated Image 3" style="width: 100%;"/>
   </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
-  <img src="examples/fofr_20250329_160804.png" alt="Example 1">
-  <img src="examples/fofr_20250329_160759.png" alt="Example 2">
-  <img src="examples/fofr_20250329_160755.png" alt="Example 3">
-  <img src="examples/fofr_20250329_160749.png" alt="Example 4">
-  <img src="examples/fofr_20250329_160744.png" alt="Example 5">
-  <img src="examples/fofr_20250329_160719.png" alt="Example 6">
-  <img src="examples/fofr_20250329_160715.png" alt="Example 7">
-  <img src="examples/fofr_20250329_160709.png" alt="Example 8">
-  <img src="examples/fofr_20250329_160704.png" alt="Example 9">
-  <img src="examples/fofr_20250329_160702.png" alt="Example 10">
-  <img src="examples/fofr_20250329_160650.png" alt="Example 11">
-  <img src="examples/fofr_20250329_160644.png" alt="Example 12">
-  <img src="examples/fofr_20250329_160640.png" alt="Example 13">
-  <img src="examples/fofr_20250329_160634.png" alt="Example 14">
-  <img src="examples/fofr_20250329_160629.png" alt="Example 15">
-  <img src="examples/fofr_20250329_160447.png" alt="Example 16">
-  <img src="examples/fofr_20250329_160441.png" alt="Example 17">
-  <img src="examples/fofr_20250329_160435.png" alt="Example 18">
-  <img src="examples/fofr_20250329_160431.png" alt="Example 19">
-  <img src="examples/fofr_20250329_160425.png" alt="Example 20">
-  <img src="examples/fofr_20250329_160421.png" alt="Example 21">
-  <img src="examples/fofr_20250329_160415.png" alt="Example 22">
-  <img src="examples/fofr_20250329_160411.png" alt="Example 23">
-  <img src="examples/fofr_20250329_160207.png" alt="Example 24">
-  <img src="examples/fofr_20250329_160202.png" alt="Example 25">
-  <img src="examples/fofr_20250329_160157.png" alt="Example 26">
-  <img src="examples/fofr_20250329_160153.png" alt="Example 27">
-  <img src="examples/fofr_20250329_160147.png" alt="Example 28">
-  <img src="examples/fofr_20250329_160142.png" alt="Example 29">
-  <img src="examples/fofr_20250329_160137.png" alt="Example 30">
-  <img src="examples/fofr_20250329_160119.png" alt="Example 31">
-  <img src="examples/fofr_20250329_160006.png" alt="Example 32">
-  <img src="examples/fofr_20250329_155915.png" alt="Example 33">
-  <img src="examples/fofr_20250329_155910.png" alt="Example 34">
-  <img src="examples/fofr_20250329_155905.png" alt="Example 35">
-  <img src="examples/fofr_20250329_155850.png" alt="Example 36">
-  <img src="examples/fofr_20250329_155840.png" alt="Example 37">
-  <img src="examples/fofr_20250329_155835.png" alt="Example 38">
-  <img src="examples/fofr_20250329_155830.png" alt="Example 39">
-  <img src="examples/fofr_20250329_155826.png" alt="Example 40">
+<div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 20px;">
+  <img src="examples/fofr_20250329_160804.png" alt="Example 1" style="width: 100%;">
+  <img src="examples/fofr_20250329_160759.png" alt="Example 2" style="width: 100%;">
+  <img src="examples/fofr_20250329_160755.png" alt="Example 3" style="width: 100%;">
+  <img src="examples/fofr_20250329_160749.png" alt="Example 4" style="width: 100%;">
+  <img src="examples/fofr_20250329_160744.png" alt="Example 5" style="width: 100%;">
+  <img src="examples/fofr_20250329_160719.png" alt="Example 6" style="width: 100%;">
+  <img src="examples/fofr_20250329_160715.png" alt="Example 7" style="width: 100%;">
+  <img src="examples/fofr_20250329_160709.png" alt="Example 8" style="width: 100%;">
+  <img src="examples/fofr_20250329_160704.png" alt="Example 9" style="width: 100%;">
+  <img src="examples/fofr_20250329_160702.png" alt="Example 10" style="width: 100%;">
+  <img src="examples/fofr_20250329_160650.png" alt="Example 11" style="width: 100%;">
+  <img src="examples/fofr_20250329_160644.png" alt="Example 12" style="width: 100%;">
+  <img src="examples/fofr_20250329_160640.png" alt="Example 13" style="width: 100%;">
+  <img src="examples/fofr_20250329_160634.png" alt="Example 14" style="width: 100%;">
+  <img src="examples/fofr_20250329_160629.png" alt="Example 15" style="width: 100%;">
+  <img src="examples/fofr_20250329_160447.png" alt="Example 16" style="width: 100%;">
+  <img src="examples/fofr_20250329_160441.png" alt="Example 17" style="width: 100%;">
+  <img src="examples/fofr_20250329_160435.png" alt="Example 18" style="width: 100%;">
+  <img src="examples/fofr_20250329_160431.png" alt="Example 19" style="width: 100%;">
+  <img src="examples/fofr_20250329_160425.png" alt="Example 20" style="width: 100%;">
+  <img src="examples/fofr_20250329_160421.png" alt="Example 21" style="width: 100%;">
+  <img src="examples/fofr_20250329_160415.png" alt="Example 22" style="width: 100%;">
+  <img src="examples/fofr_20250329_160411.png" alt="Example 23" style="width: 100%;">
+  <img src="examples/fofr_20250329_160207.png" alt="Example 24" style="width: 100%;">
+  <img src="examples/fofr_20250329_160202.png" alt="Example 25" style="width: 100%;">
+  <img src="examples/fofr_20250329_160157.png" alt="Example 26" style="width: 100%;">
+  <img src="examples/fofr_20250329_160153.png" alt="Example 27" style="width: 100%;">
+  <img src="examples/fofr_20250329_160147.png" alt="Example 28" style="width: 100%;">
+  <img src="examples/fofr_20250329_160142.png" alt="Example 29" style="width: 100%;">
+  <img src="examples/fofr_20250329_160137.png" alt="Example 30" style="width: 100%;">
+  <img src="examples/fofr_20250329_160119.png" alt="Example 31" style="width: 100%;">
+  <img src="examples/fofr_20250329_160006.png" alt="Example 32" style="width: 100%;">
+  <img src="examples/fofr_20250329_155915.png" alt="Example 33" style="width: 100%;">
+  <img src="examples/fofr_20250329_155910.png" alt="Example 34" style="width: 100%;">
+  <img src="examples/fofr_20250329_155905.png" alt="Example 35" style="width: 100%;">
+  <img src="examples/fofr_20250329_155850.png" alt="Example 36" style="width: 100%;">
+  <img src="examples/fofr_20250329_155840.png" alt="Example 37" style="width: 100%;">
+  <img src="examples/fofr_20250329_155835.png" alt="Example 38" style="width: 100%;">
+  <img src="examples/fofr_20250329_155830.png" alt="Example 39" style="width: 100%;">
+  <img src="examples/fofr_20250329_155826.png" alt="Example 40" style="width: 100%;">
 </div>
 
 ## Features
