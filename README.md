@@ -248,3 +248,5 @@ The sketch requires a Flask server to communicate with the Replicate API.
   <img src="examples/fofr_20250329_155830.png" alt="Example 39" style="width: 256px;">
   <img src="examples/fofr_20250329_155826.png" alt="Example 40" style="width: 256px;">
 </div>
+
+[More test outputs](https://photos.app.goo.gl/2CfwwbbYb4hsmTRn9)
