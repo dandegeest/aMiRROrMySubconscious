@@ -165,6 +165,40 @@ Health check endpoint.
 }
 ```
 
+## Program Flow
+
+The application operates in a continuous loop with three main phases:
+
+### 1. Capture Phase
+- The webcam continuously captures video frames
+- Motion detection analyzes frame differences
+- When significant motion is detected (or manual capture is triggered):
+  - The current frame is captured
+  - The image is preprocessed (resized, flipped if needed)
+  - The image is encoded to base64 for transmission
+
+### 2. Generation Phase
+- The captured image is sent to the Flask server
+- The server forwards the request to Replicate's API
+- The selected AI model processes the image with the current prompt and parameters
+- The generation runs asynchronously to prevent UI blocking
+- Progress updates are received and displayed
+
+### 3. Display Phase
+- The original webcam feed is shown in real-time
+- When a new AI-generated image is ready:
+  - The image is downloaded from Replicate
+  - The display switches to show the AI interpretation
+  - The image is saved to disk if auto-save is enabled
+- The cycle continues by monitoring for new motion in the webcam feed, triggering a new capture when significant movement is detected or when manually triggered
+- If no motion is detected for 30 seconds, the auto timeout feature activates, randomly selecting a word from a list of evocative terms (like "Reverie", "Fracture", "Mirage", "Doppelgänger", "Submerge", etc.) and using the "condensation" model to generate a new interpretation with the prompt "The word '[selected word]' on a steamed over mirror"
+
+The application maintains smooth performance by:
+- Using separate threads for API communication
+- Implementing frame skipping during generation
+- Caching generated images
+- Optimizing memory usage with proper image disposal
+
 ## Example Usage
 
 Using curl:
@@ -190,3 +224,11 @@ curl -X POST http://localhost:5000/generate \
 ## License
 
 MIT License 
+
+## Concept Images and Ideation (ChatGPT)
+
+[Ideation was done using ChatGPT](docs/aMiRROR_%20An%20Interactive%20AI%20Mirror%20Experience.pdf) including concept images, ideas on technology stacks, and more.
+
+| | |
+|:---:|:---:|
+| ![Concept Image 1](docs/concept_image_1.png) | ![Concept Image 2](docs/concept_image_2.png) |

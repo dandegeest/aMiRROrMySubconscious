@@ -23,7 +23,7 @@ Using found and repurposed materials in its construction, aMiRRoR also embodies 
 
 ## Concept Images and Ideation (ChatGPT)
 
-[Ideation was done using ChatGPT]() including concept images, ideas on technology stacks, and more.
+[Ideation was done using ChatGPT](docs/aMiRROR_%20An%20Interactive%20AI%20Mirror%20Experience.pdf) including concept images, ideas on technology stacks, and more.
 
 | | |
 |:---:|:---:|
