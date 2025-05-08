@@ -31,7 +31,7 @@ If you need to update Java, download the latest JDK from [Oracle](https://www.or
 
 After installing the Video library and ensuring you have Java 11+, restart Processing and open the aMiRROR.pde sketch.
 
-## Example Outputs
+## Test Outputs
 
 <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
   <img src="images/fofr_mysubconscious_20250403_202325.png" alt="AI Generated Image 1""/>
