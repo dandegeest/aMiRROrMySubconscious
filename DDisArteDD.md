@@ -48,7 +48,8 @@ Using found and repurposed materials in its construction, aMiRRoR also embodies 
 ## About DDisArteDD
 
 <div style="display: flex; align-items: flex-start; gap: 20px;">
-    <img src="images/DD.png" alt="DDisArteDD" style="width: 200px;">
+    <img src="images/DDisArteDD.jpg" alt="DDisArteDD Logo" style="width: 150px;">
+    <img src="images/DD.png" alt="DD" style="width: 200px;">
     <div>
         DDisArteDD is a creative studio founded by Creative Technologist Dan DeGeest (DD), dedicated to blending traditional assemblage and environmental art with technology, AI, sound, and interactive media. By repurposing found objects and discarded materials, the studio fuses physical and digital elements, integrating microcontrollers, real-time data, and generative AI to push the boundaries of what art can be. Sculptural reliefs, site-specific installations, and mixed-media compositions come to life through dynamic layering, light, and motion, creating immersive experiences that challenge perceptions of waste, value, and transformation.
     </div>
