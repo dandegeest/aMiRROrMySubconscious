@@ -249,6 +249,123 @@ def health_check():
 def get_models():
     return jsonify(list(MODEL_VERSIONS.keys()))
 
+@app.route("/kontext", methods=["POST", "GET"])
+def kontext():
+    # Handle GET requests for polling
+    if request.method == "GET":
+        prediction_id = request.args.get("id")
+        if not prediction_id:
+            return jsonify({"success": False, "error": "No prediction ID provided"}), 400
+            
+        try:
+            # Get prediction status from Replicate
+            headers = {
+                "Authorization": f"Bearer {REPLICATE_API_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            
+            response = session.get(
+                f"https://api.replicate.com/v1/predictions/{prediction_id}",
+                headers=headers
+            )
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            # Return appropriate response
+            if result.get("output") and isinstance(result["output"], list):
+                return jsonify({"success": True, "output_url": result["output"][0]})
+            elif result.get("status") == "succeeded":
+                return jsonify({"success": True, "output_url": result.get("output")})
+            else:
+                return jsonify({
+                    "success": True,
+                    "prediction_id": result.get("id"),
+                    "status": result.get("status")
+                })
+                
+        except Exception as e:
+            logger.error(f"Error polling Kontext prediction: {str(e)}")
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    # Handle POST requests for new predictions
+    try:
+        data = request.get_json() or {}
+        
+        # Validate required parameters
+        if not data.get("image"):
+            return jsonify({"success": False, "error": "No image provided"}), 400
+            
+        # Create parameters dict with only what Kontext needs
+        kontext_params = {
+            "prompt": data.get("prompt", "A surreal mirror reflection"),
+            "input_image": None,  # Will be set after processing
+            "aspect_ratio": "16:9"  # Always use 16:9 for Kontext
+        }
+        
+        # Process image
+        image_data = data.get("image")
+        temp_file = None
+        if image_data:
+            future = executor.submit(process_image, image_data)
+            try:
+                processed_image, temp_file = future.result(timeout=10)
+                kontext_params["input_image"] = processed_image
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Image processing error: {str(e)}"}), 400
+        
+        # Log parameters (excluding image data)
+        log_params = {k: v for k, v in kontext_params.items() if k != "input_image"}
+        logger.info(f"Sending parameters to Kontext model: {log_params}")
+        
+        # Call Replicate API
+        headers = {
+            "Authorization": f"Bearer {REPLICATE_API_TOKEN}",
+            "Content-Type": "application/json",
+            "Prefer": "wait"
+        }
+        
+        response = session.post(
+            "https://api.replicate.com/v1/predictions",
+            headers=headers,
+            json={
+                "version": "black-forest-labs/flux-kontext-pro",
+                "input": kontext_params
+            }
+        )
+        
+        if response.status_code == 422:
+            error_detail = response.json().get("detail", "Unknown error")
+            logger.error(f"Replicate API validation error: {error_detail}")
+            return jsonify({"success": False, "error": f"API validation error: {error_detail}"}), 422
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        # Return appropriate response
+        if result.get("output") and isinstance(result["output"], list):
+            return jsonify({"success": True, "output_url": result["output"][0]})
+        elif result.get("status") == "succeeded":
+            return jsonify({"success": True, "output_url": result.get("output")})
+        else:
+            return jsonify({
+                "success": True,
+                "prediction_id": result.get("id"),
+                "status": result.get("status")
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in kontext: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+        
+    finally:
+        # Clean up temp file if created
+        if temp_file:
+            try:
+                os.unlink(temp_file)
+            except:
+                pass
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True) 
