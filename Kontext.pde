@@ -52,6 +52,30 @@ String currentSessionPrefix = "";  // Will store the timestamp prefix for curren
 // Camera preview control
 boolean showCameraPreview = true;
 
+// Batch processing
+String[] defaultPrompts = {
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker",
+  "A well worn cassette tape that says Generation Loss in faded black sharpie marker"
+};
+
 void setup() {
   size(1280, 720);
   
@@ -106,8 +130,10 @@ void draw() {
     cam.read();
   }
   
-  // Display current image (either captured or result) at full window size
-  if (currentImage != null) {
+  // Display the most recent generation (resultImage) if available, otherwise fall back to currentImage
+  if (resultImage != null) {
+    image(resultImage, 0, 0, width, height);
+  } else if (currentImage != null) {
     image(currentImage, 0, 0, width, height);
   }
   
@@ -168,22 +194,33 @@ void drawIndicator() {
 }
 
 void keyPressed() {
-  if (key == ENTER || key == RETURN) {
-    if (currentImage != null && !isProcessing) {
-      // Send to server
-      sendToServer();
+  if (promptField.isFocus()) {
+    // If text field has focus, only handle Enter/Return
+    if (key == ENTER || key == RETURN) {
+      if (currentImage != null && !isProcessing) {
+        // Send to server
+        sendToServer();
+      }
     }
-  } else if (key == CODED && !promptField.isFocus()) {
-    if (keyCode == LEFT) {
-      // Go to previous version
-      if (currentVersion > 0) {
-        currentVersion--;
+  } else {
+    // Only process other keyboard commands if text field doesn't have focus
+    if (key == ' ') {
+      // Start processing all prompts when space is pressed
+      if (currentImage != null && !isProcessing) {
+        processAllPrompts();
+      }
+    } else if (key == CODED) {
+      if (keyCode == LEFT) {
+        // Go to previous version
+        if (currentVersion > 0) {
+          currentVersion--;
+          loadCurrentVersion();
+        }
+      } else if (keyCode == RIGHT) {
+        // Go to next version
+        currentVersion++;
         loadCurrentVersion();
       }
-    } else if (keyCode == RIGHT) {
-      // Go to next version
-      currentVersion++;
-      loadCurrentVersion();
     }
   }
 }
@@ -200,6 +237,7 @@ void loadCurrentVersion() {
   if (file.exists()) {
     currentImage = loadImage(filename);
     println("Loaded version " + currentVersion + " from: " + filename);
+    resultImage = null;
   } else {
     // If file doesn't exist, go back to last valid version
     currentVersion--;
@@ -483,7 +521,144 @@ void dropEvent(DropEvent event) {
         String filename = String.format("data/Kontext/capture_%s.png", currentSessionPrefix);
         currentImage.save(filename);
         println("Saved dropped image to: " + filename);
+        
+        // Process all prompts
+        //processAllPrompts();
       }
     }
+  }
+}
+
+void processAllPrompts() {
+  // Process each prompt
+  for (int i = 0; i < defaultPrompts.length; i++) {
+    // Set the prompt in the text field
+    promptField.setText(defaultPrompts[i] + " and don't change the size or location of the cassette tape");
+    
+    // Send to server and wait for completion
+    sendToServerAndWait();
+  }
+}
+
+void sendToServerAndWait() {
+  isProcessing = true;
+  
+  // Create the JSON payload
+  JSONObject json = new JSONObject();
+  json.setString("prompt", promptField.getText());
+  json.setString("image", encodeImageToBase64(currentImage));
+  
+  try {
+    // Create HTTP request
+    HttpRequest request = HttpRequest.newBuilder()
+      .uri(URI.create(kontextEndpoint))
+      .header("Content-Type", "application/json")
+      .POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+      .build();
+    
+    // Send request and get response
+    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    
+    if (response.statusCode() == 200) {
+      JSONObject jsonResponse = parseJSONObject(response.body());
+      
+      if (jsonResponse.hasKey("output_url")) {
+        // Handle immediate response
+        handleImageResponse(jsonResponse.getString("output_url"));
+      } else if (jsonResponse.hasKey("prediction_id")) {
+        // Handle polling response
+        String predictionId = jsonResponse.getString("prediction_id");
+        pollForCompletion(predictionId);
+      }
+    } else {
+      println("Error: Server returned status code " + response.statusCode());
+      println("Response: " + response.body());
+    }
+  } catch (Exception e) {
+    println("Error sending to server: " + e.getMessage());
+    e.printStackTrace();
+  } finally {
+    isProcessing = false;
+  }
+}
+
+void pollForCompletion(String predictionId) {
+  int attempts = 0;
+  int maxAttempts = 30; // 30 seconds timeout
+  
+  while (attempts < maxAttempts) {
+    try {
+      // Wait 1 second between attempts
+      Thread.sleep(1000);
+      attempts++;
+      
+      // Create polling request
+      HttpRequest pollRequest = HttpRequest.newBuilder()
+        .uri(URI.create(kontextEndpoint + "?id=" + predictionId))
+        .GET()
+        .build();
+      
+      HttpResponse<String> pollResponse = httpClient.send(pollRequest, HttpResponse.BodyHandlers.ofString());
+      
+      if (pollResponse.statusCode() == 200) {
+        JSONObject pollJson = parseJSONObject(pollResponse.body());
+        
+        if (pollJson.hasKey("output_url")) {
+          handleImageResponse(pollJson.getString("output_url"));
+          return;
+        } else if (pollJson.hasKey("status")) {
+          String status = pollJson.getString("status");
+          if (status.equals("succeeded")) {
+            if (pollJson.hasKey("output_url")) {
+              handleImageResponse(pollJson.getString("output_url"));
+              return;
+            }
+          } else if (status.equals("failed")) {
+            println("Error: Prediction failed");
+            return;
+          }
+        }
+      }
+    } catch (Exception e) {
+      println("Error polling server: " + e.getMessage());
+    }
+  }
+  
+  println("Error: Prediction timed out after " + maxAttempts + " seconds");
+}
+
+void handleImageResponse(String imageUrl) {
+  if (imageUrl != null && !imageUrl.isEmpty()) {
+    try {
+      // Download the image
+      HttpRequest imageRequest = HttpRequest.newBuilder()
+        .uri(URI.create(imageUrl))
+        .GET()
+        .build();
+      
+      HttpResponse<byte[]> imageResponse = httpClient.send(imageRequest, HttpResponse.BodyHandlers.ofByteArray());
+      
+      if (imageResponse.statusCode() == 200) {
+        // Increment version counter
+        currentVersion++;
+        // Save the image bytes to a file with version number
+        String resultFile = String.format("data/Kontext/kontext_%s-%d.png", currentSessionPrefix, currentVersion);
+        Files.write(Paths.get(sketchPath(resultFile)), imageResponse.body());
+        println("Saved result to: " + resultFile);
+        
+        // Load the image
+        resultImage = loadImage(resultFile);
+        println("Image loaded successfully from: " + resultFile);
+        
+        // Set the result as the current image for next processing
+        currentImage = resultImage.copy();
+      } else {
+        println("Error downloading image: " + imageResponse.statusCode());
+      }
+    } catch (Exception e) {
+      println("Error handling image response: " + e.getMessage());
+    }
+  } else {
+    println("Error: Empty image URL received from server");
   }
 }
